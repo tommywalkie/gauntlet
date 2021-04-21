@@ -5,6 +5,7 @@
   <i>Lightning-fast front-end tool which does put a smile on my face</i>
 </p>
 <p align="center">
+  <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fdeno-visualizer.danopia.net%2Fshields%2Flatest-version%2Fx%2Fgauntlet%2Fmod.ts" />
   <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fdeno-visualizer.danopia.net%2Fshields%2Fcache-size%2Fhttps%2Fdeno.land%2Fx%2Fgauntlet%2Fmod.ts" alt="Current cache size" />
   <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fdeno-visualizer.danopia.net%2Fshields%2Fupdates%2Fhttps%2Fdeno.land%2Fx%2Fgauntlet%2Fmod.ts" />
 </p>
@@ -88,7 +89,7 @@ Contributing section is still _work-in-progress_, but here is the basic idea:
 ![Current dependency graph](https://deno-visualizer.danopia.net/dependencies-of/https/deno.land/x/gauntlet/mod.ts?rankdir=LR&format=svg)
 
 <p align="center">
-  <em>Dependency graph via <a href="https://deno-visualizer.danopia.net/dependencies-of/https/raw.githubusercontent.com/tommywalkie/gauntlet/main/mod.ts?rankdir=LR">Deno Visualizer</a>, using <code>mod.ts</code> as entrypoint</em>
+  <em>Dependency graph via <a href="https://deno-visualizer.danopia.net/dependencies-of/https/deno.land/x/gauntlet/mod.ts?rankdir=LR">Deno Visualizer</a>, using <code>mod.ts</code> as entrypoint</em>
 </p>
 
 ## License
