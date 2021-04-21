@@ -1,5 +1,5 @@
 import { runDevServer } from '../../server.ts'
-import { defaultEventSource } from '../../reporter.ts'
+import { defaultEmitter } from '../../emitter.ts'
 import * as esbuild from '../../../imports/esbuild.ts'
 import type { ProgramCallbackProps } from '../types.ts'
 
@@ -7,15 +7,15 @@ export async function dev(props: ProgramCallbackProps) {
     try {
         await runDevServer({
             port: 8000,
-            eventSource: defaultEventSource,
+            eventSource: defaultEmitter,
             mounts: [ './' ]
         })
     }
     catch (error: any) {
         esbuild.stop()
-        defaultEventSource.emit('debug', 'Gracefully stopped the ESBuild service')
-        defaultEventSource.emit('fatal', error.message ?? 'Unhandled error encountered:')
+        defaultEmitter.emit('debug', 'Gracefully stopped the ESBuild service')
+        defaultEmitter.emit('fatal', error.message ?? 'Unhandled error encountered:')
         console.error(error)
-        defaultEventSource.emit('terminate')
+        defaultEmitter.emit('terminate')
     }
 }

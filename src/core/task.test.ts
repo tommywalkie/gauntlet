@@ -1,5 +1,5 @@
 import { expect, it } from '../../imports/expect.ts'
-import { task, series, parallel, priorityQueue } from './task.ts'
+import { task, series, parallel } from './task.ts'
 
 it('should be able to run tasks in sequence', async () => {
     let state = ''
@@ -34,31 +34,3 @@ it('should be able to run tasks in parallel', async () => {
     ])
     expect(state).toBe('ACDEB')
 })
-
-// For some reason the following test case has consistent results on
-// a Windows machine but just doesn't work on CI
-
-/*
-it('should be able to prioritize tasks', async () => {
-    let state = ''
-    function timeout(ms: number, label: string) {
-        return new Promise(resolve => setTimeout(() => {
-            state = state + label
-            resolve(true)
-        }, ms));
-    }
-    const { run, pushTask } = priorityQueue([
-        task(async () => await timeout(20, 'A'), { priority: 0 }),
-        task(async () => await timeout(100, 'B'), { priority: 2 }),
-        task(async () => await timeout(10, 'C'), { priority: 5 }),
-        task(async () => await timeout(20, 'D'), { priority: 1 }),
-        task(async () => await timeout(100, 'E'), { priority: 4 })
-    ])
-    run()
-    setTimeout(() => pushTask(
-        async () => await timeout(20, 'F'),
-        { priority: 6 }
-    ), 40)
-    await timeout(700, '').then(_ => expect(state).toBe('CFEBDA'))
-})
-*/

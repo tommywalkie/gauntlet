@@ -5,10 +5,10 @@
   <i>Lightning-fast front-end tool which does put a smile on my face</i>
 </p>
 <p align="center">
-  <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fdeno-visualizer.danopia.net%2Fshields%2Flatest-version%2Fx%2Fgauntlet%2Fmod.ts" />
+  <a href="https://deno.land/x/gauntlet"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fdeno-visualizer.danopia.net%2Fshields%2Flatest-version%2Fx%2Fgauntlet%2Fmod.ts" /></a>
   <img src="https://img.shields.io/github/workflow/status/tommywalkie/gauntlet/Deno?logo=github" />
-  <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fdeno-visualizer.danopia.net%2Fshields%2Fcache-size%2Fhttps%2Fdeno.land%2Fx%2Fgauntlet%2Fmod.ts" alt="Current cache size" />
-  <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fdeno-visualizer.danopia.net%2Fshields%2Fupdates%2Fhttps%2Fdeno.land%2Fx%2Fgauntlet%2Fmod.ts" />
+  <a href="https://deno-visualizer.danopia.net/dependencies-of/https/deno.land/x/gauntlet/mod.ts?rankdir=LR"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fdeno-visualizer.danopia.net%2Fshields%2Fcache-size%2Fhttps%2Fdeno.land%2Fx%2Fgauntlet%2Fmod.ts" alt="Current cache size" /></a>
+  <a href="https://deno-visualizer.danopia.net/dependencies-of/https/deno.land/x/gauntlet/mod.ts?rankdir=LR"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fdeno-visualizer.danopia.net%2Fshields%2Fupdates%2Fhttps%2Fdeno.land%2Fx%2Fgauntlet%2Fmod.ts" /></a>
 </p>
 
 
@@ -86,12 +86,6 @@ Contributing section is still _work-in-progress_, but here is the basic idea:
 - Prefer modularized dependencies over heavy centralized ones using, inter alia, the [`deps.ts` convention](https://deno.land/manual/examples/manage_dependencies) (*i.e.* please don't make accustomed Lodash users vendor the whole `deno.land/x`)
 - Most core features shall be event-driven, using the available `EventEmitter` implementation in `imports/deno_events.ts` which is based on [`deno_events`](https://deno.land/x/deno_events) for type safety
 - Test files (`**/*.test.ts`) use the available Jest-like matchers in `imports/expect.ts` which are based on [`expect`](https://deno.land/x/expect)
-
-![Current dependency graph](https://deno-visualizer.danopia.net/dependencies-of/https/deno.land/x/gauntlet/mod.ts?rankdir=LR&format=svg)
-
-<p align="center">
-  <em>Dependency graph via <a href="https://deno-visualizer.danopia.net/dependencies-of/https/deno.land/x/gauntlet/mod.ts?rankdir=LR">Deno Visualizer</a>, using <code>mod.ts</code> as entrypoint</em>
-</p>
 
 ## License
 

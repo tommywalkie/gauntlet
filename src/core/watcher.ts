@@ -1,6 +1,6 @@
 import { isWindows } from '../../imports/std.ts'
 import { EventEmitter } from '../../imports/deno_events.ts'
-import type { FsEvent, WalkEntry, FileSystem } from './fs.ts'
+import type { FsEvent, WalkEntry, FileSystemLike } from './fs.ts'
 
 /**
  * File system events
@@ -18,7 +18,7 @@ export interface FsEvents {
 export interface WatcherOptions {
     mounts: string[],
     eventSource?: EventEmitter<any>,
-    fs: FileSystem
+    fs: FileSystemLike
 }
 
 /**
@@ -41,7 +41,7 @@ export function register(options: WatcherOptions) {
 export async function watch(
     source: string,
     eventSource: EventEmitter<FsEvents>,
-    fs: FileSystem
+    fs: FileSystemLike
 ) {
     const watcher = fs.watch(source)
     const iterator: AsyncIterableIterator<WalkEntry> = fs.walk(source)
