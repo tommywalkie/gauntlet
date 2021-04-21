@@ -2,7 +2,7 @@ import type { DenoManifest } from './imports/deno_run.ts'
 
 export const manifest: DenoManifest = {
     name: 'gauntlet',
-    version: '0.0.1',
+    version: '0.0.2',
     entry: 'mod.ts',
     unstable: true,
     permissions: {
