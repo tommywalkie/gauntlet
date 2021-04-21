@@ -31,7 +31,7 @@ jobs:
           deno-version: v1.x
 
       - name: Cache Dependencies
-        run: deno cache imports/mod.ts
+        run: deno cache --unstable imports/mod.ts
 
       - name: Run Tests
         run: deno test -A --unstable
