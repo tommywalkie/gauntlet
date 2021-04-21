@@ -1,4 +1,4 @@
-import { isWindows } from 'https://deno.land/std@0.93.0/_util/os.ts'
+import { isWindows } from '../../imports/std.ts'
 import { EventEmitter } from '../../imports/deno_events.ts'
 import type { FsEvent, WalkEntry, FileSystem } from './fs.ts'
 

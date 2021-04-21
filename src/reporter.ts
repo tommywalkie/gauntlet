@@ -1,6 +1,13 @@
-import { cyan, gray, green, yellow, red, blue } from 'https://deno.land/std@0.93.0/fmt/colors.ts'
-import { bold } from 'https://deno.land/std@0.93.0/fmt/colors.ts'
-import { normalize } from 'https://deno.land/std@0.93.0/path/mod.ts'
+import {
+    cyan,
+    gray,
+    green,
+    yellow,
+    red,
+    blue,
+    bold
+} from '../imports/std.ts'
+import { normalize } from '../imports/std.ts'
 import { EventEmitter } from '../imports/deno_events.ts'
 import { WalkEntry } from './core/fs.ts'
 import { TsundereEvents } from './server.ts'
@@ -48,7 +55,7 @@ function capitalize(str: string) {
 const defaultEventSource = new EventEmitter<TsundereEvents>()
 
 defaultEventSource.on("watch", (source: string) => {
-    logger.info(`Now watching ${bold(yellow(normalize(source) + '\\'))} for file changes...`)
+    logger.info(`Now watching ${bold(yellow(normalize(source)))} for file changes...`)
 })
 
 defaultEventSource.on("modify", (entry: WalkEntry) => {

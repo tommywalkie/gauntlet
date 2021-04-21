@@ -2,14 +2,11 @@ import {
     Application,
     ApplicationListenEvent,
     ApplicationErrorEvent,
-    Context,
-    send
+    Context
 } from '../imports/oak.ts'
-import { setHandler, Disposable } from '../imports/ctrlc.ts'
 import * as esbuild from '../imports/esbuild.ts'
 import { EventEmitter } from '../imports/deno_events.ts'
-import { normalize } from 'https://deno.land/std@0.93.0/path/mod.ts'
-import { exists, walk } from 'https://deno.land/std@0.93.0/fs/mod.ts'
+import { exists, normalize, walk } from '../imports/std.ts'
 import { register } from './core/watcher.ts'
 import type { FsEvents } from './core/watcher.ts'
 import type { LogEvents } from './core/events.ts'
@@ -43,7 +40,8 @@ async function gracefulExit(
     // Deno.signal is not yet implemented on Windows.
     // https://github.com/denoland/deno/issues/9995
     if (Deno.build.os === 'windows') {
-        const _: Disposable = setHandler(() => terminate(eventSource))
+        const { setHandler } = await import('../imports/ctrlc.ts')
+        const _ = setHandler(() => terminate(eventSource))
         return
     }
     // Otherwise, if using UNIX, listen to Deno.signal
@@ -57,14 +55,11 @@ export async function runDevServer(options: DevServerOptions = {
     mounts: [ Deno.cwd() ],
 }) {
     const eventSource = options.eventSource ?? new EventEmitter<TsundereEvents>()
-    // await esbuild.initialize({}).then(_ => eventSource.emit('debug', 'ESBuild service is ready'))
+    await esbuild.initialize({}).then(_ => eventSource.emit('debug', 'ESBuild service is ready'))
     const app = new Application()
 
     app.use(async (context: Context) => {
-        await send(context, context.request.url.pathname, {
-            root: `${Deno.cwd()}/public`,
-            index: "index.html",
-        })
+        context.response.body = "Hello world!";
     })
 
     app.addEventListener("listen", async (evt: ApplicationListenEvent) => {
