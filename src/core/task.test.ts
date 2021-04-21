@@ -43,16 +43,16 @@ it('should be able to prioritize tasks', async () => {
         }, ms));
     }
     const { run, pushTask } = priorityQueue([
-        task(async () => await timeout(20, 'A'), { priority: 0 }),
-        task(async () => await timeout(20, 'B'), { priority: 2 }),
+        task(async () => await timeout(40, 'A'), { priority: 0 }),
+        task(async () => await timeout(40, 'B'), { priority: 2 }),
         task(async () => await timeout(20, 'C'), { priority: 5 }),
-        task(async () => await timeout(20, 'D'), { priority: 1 }),
-        task(async () => await timeout(20, 'E'), { priority: 4 })
+        task(async () => await timeout(40, 'D'), { priority: 1 }),
+        task(async () => await timeout(40, 'E'), { priority: 4 })
     ])
     run()
     setTimeout(() => pushTask(
         async () => await timeout(20, 'F'),
         { priority: 6 }
-    ), 42)
+    ), 30)
     await timeout(400, '').then(_ => expect(state).toBe('CFEBDA'))
 })
