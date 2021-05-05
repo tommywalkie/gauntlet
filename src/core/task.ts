@@ -1,4 +1,5 @@
 import { EventEmitter } from '../../imports/deno_events.ts'
+import { randomId } from './utils.ts'
 
 interface TaskPayload<T = any> {
     previousReport?: T
@@ -23,10 +24,6 @@ interface TaskOptions {
     eventSource?: EventEmitter<TaskEvents>,
     priority?: number,
     label?: string
-}
-
-function randomId() {
-    return Math.random().toString(36).substr(2, 9)
 }
 
 export function task<T>(cb: TaskJob<T>, options?: TaskOptions): Task {

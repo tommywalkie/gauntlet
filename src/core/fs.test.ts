@@ -19,7 +19,7 @@ it('should be able to walk a virtual filesystem', async () => {
         entries.push(entry)
     }
     const result = entries.map(el => el.path).join('-')
-    expect(result).toBe('/A.txt-/B.txt-/C-/C/D.txt')
+    expect(result).toBe('\\A.txt-\\B.txt-\\C-\\C\\D.txt')
 })
 
 it('should be able to get stats in a virtual filesystem', async () => {
@@ -41,4 +41,30 @@ it('should be able to check presence in a virtual filesystem', async () => {
     fs.add('/C/D.txt', 'D')
     expect(await fs.exists('/A.txt')).toBeTruthy()
     expect(await fs.exists('/E.txt')).toBeFalsy()
+})
+
+it('should be able to watch for virtual filesystem events', async () => {
+    const incr: string[] = []
+    const fs = createVirtualFileSystem()
+    fs.on('create', () => incr.push('C'))
+    fs.on('modify', () => incr.push('M'))
+    fs.on('remove', () => incr.push('R'))
+    fs.add('/A.txt', 'A')
+    fs.add('/B.txt', 'B')
+    fs.add('/A.txt', 'C')
+    fs.remove('/B.txt')
+    expect(incr.join('')).toBe('CCMR')
+})
+
+it('should be able to watch a virtual filesystem', async () => {
+    const incr: string[] = []
+    const fs = createVirtualFileSystem()
+    setTimeout(() => fs.add('/A.txt', 'A'), 100)
+    setTimeout(() => fs.add('/B.txt', 'B'), 150)
+    setTimeout(() => fs.add('/A.txt', 'C'), 250)
+    setTimeout(() => fs.remove('/B.txt'), 320)
+    for await (const event of fs.watch('/', { timeout: 600 })) {
+        incr.push(event.kind)
+    }
+    expect(incr.join()).toBe('create,create,modify,remove')
 })

@@ -8,7 +8,7 @@ export async function dev(props: ProgramCallbackProps) {
         await runDevServer({
             port: 8000,
             eventSource: defaultEmitter,
-            mounts: [ './' ]
+            mounts: [ './src' ]
         })
     }
     catch (error: any) {

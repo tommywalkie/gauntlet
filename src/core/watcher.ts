@@ -1,19 +1,8 @@
 import { isWindows } from '../../imports/std.ts'
 import { EventEmitter } from '../../imports/deno_events.ts'
-import type { FsEvent, WalkEntry, FileSystemLike } from './fs.ts'
-
-/**
- * File system events
- * 
- * This is basically a high-level `Deno.FsEvents` wrapper, leveraging
- * unintuitive behaviours on non-Unix systems with `Deno.watchFs`.
- */
-export interface FsEvents {
-    modify(path: WalkEntry): void;
-    create(path: WalkEntry): void;
-    remove(path: WalkEntry): void;
-    watch(path: string): void
-}
+import { join, normalize } from '../../imports/path.ts'
+import { toArray } from './utils.ts'
+import type { FileEvents, FsEvent, WalkEntry, FileSystemLike } from './fs.ts'
 
 export interface WatcherOptions {
     mounts: string[],
@@ -21,26 +10,23 @@ export interface WatcherOptions {
     fs: FileSystemLike
 }
 
-/**
- * Takes an async interator and returns an array
- */
-export async function toArray<T>(asyncIterator: AsyncIterableIterator<T>): Promise<Array<T>> { 
-    const arr=[]; 
-    for await(const i of asyncIterator) arr.push(i); 
-    return arr;
+export interface WatchEvents {
+    watch(path: string): void;
 }
 
 export function register(options: WatcherOptions) {
     const mounts = options.mounts
-    const eventSource = options.eventSource ?? new EventEmitter<FsEvents>()
+    const eventSource = options.eventSource ?? new EventEmitter<FileEvents>()
     return mounts.map(
         async (mount: string) => await watch(mount, eventSource, options.fs)
     )
 }
 
+export { register as registerWatchers }
+
 export async function watch(
     source: string,
-    eventSource: EventEmitter<FsEvents>,
+    eventSource: EventEmitter<FileEvents & WatchEvents>,
     fs: FileSystemLike
 ) {
     const watcher = fs.watch(source)
@@ -48,7 +34,7 @@ export async function watch(
     let contents = await toArray<WalkEntry>(iterator)
 
     function format(str: string) {
-        return fs.normalize(str).substring(fs.cwd.length + 1)
+        return normalize(str).substring(join(fs.cwd, source).length + 1)
     }
 
     function diff(a: WalkEntry[], b: WalkEntry[]) {
@@ -56,11 +42,11 @@ export async function watch(
     }
 
     async function refreshSource() {
-        const snapshot = [...contents]
+        const snapshot = [...new Set([...contents])]
         setTimeout(async () => {
             const iterator = fs.walk(source)
             const entries = await toArray<WalkEntry>(iterator)
-            contents = [...entries]
+            contents = [...new Set([...entries])]
             const addedEntries = diff(entries, snapshot)
             const removedEntries = diff(snapshot, entries)
             for (let index = 0; index < removedEntries.length; index++) {
@@ -76,30 +62,34 @@ export async function watch(
         for await (const path of event.paths) {
             if (event.kind === 'create') {
                 const { isFile, isDirectory, isSymlink } = await fs.lstat(path)
-                const formatted = format(path)
                 const entry = {
-                    path: formatted,
-                    name: formatted.substring(fs.normalize(source).length + 1),
+                    path: join(source, format(path)),
+                    name: normalize(path).replace(/^.*[\\\/]/, ''),
                     isFile,
                     isDirectory,
                     isSymlink
                 }
-                if (isFile)
+                if (isFile) {
                     eventSource.emit(event.kind, entry)
+                    contents.push(entry)
+                }
                 else if (isDirectory) {
                     // Untracked files inside a non-empty folder from outside the watching scope
                     // also produce a 'create' event before the one for the actual directory.
-                    // TODO: Consider implementing priority queues.
-                    setTimeout(async () => await refreshSource(), 800)
+                    setTimeout(async () => await refreshSource(), 400)
                 }
             }
             if (event.kind === 'remove' || event.kind === 'modify') {
-                const entry = contents.find(content => content.path === format(path))
-                if (await fs.exists(fs.normalize(path))) {
-                    if (entry?.isFile) eventSource.emit(event.kind, entry)
-                    if (entry?.isDirectory) await refreshSource()
+                const entry = contents.find(content => content.path === join(source, format(path)))
+                if (entry?.isFile) {
+                    if (event.kind === 'remove') {
+                        contents = contents.filter(content => content.path !== join(source, format(path)))
+                    }
+                    eventSource.emit(event.kind, entry)
                 }
-                else await refreshSource()
+                if (entry?.isDirectory) {
+                    setTimeout(async () => await refreshSource(), 400)
+                }
             }
         }
     }

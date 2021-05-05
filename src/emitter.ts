@@ -1,6 +1,8 @@
-import { createBlankEmitter } from './core/emitter.ts'
-import { cyan, gray, green, yellow, red, blue, bold, normalize } from '../imports/std.ts'
+import { EventEmitter } from '../imports/deno_events.ts'
+import { cyan, gray, green, yellow, red, blue, bold } from '../imports/std.ts'
+import { normalize } from '../imports/path.ts'
 import { WalkEntry } from './core/fs.ts'
+import type { GauntletEvents } from './types.ts'
 
 const DEBUG_PREFIX = `${gray('[')}${bold(blue('DEBUG'))}${gray('] —')}`
 const WARN_PREFIX = `${gray('[')}${bold(yellow('WARN'))}${gray('] ——')}`
@@ -42,7 +44,7 @@ function capitalize(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-const emitter = createBlankEmitter()
+const emitter = new EventEmitter<GauntletEvents>()
 
 emitter.on("watch", (source: string) =>
     logger.info(`Now watching ${bold(yellow(normalize(source)))} for file changes...`))
@@ -68,4 +70,5 @@ emitter.on("warn", (message: string) => logger.warn(message))
 emitter.on("error", (message: string) => logger.error(message))
 emitter.on("fatal", (message: string) => logger.fatal(message))
 
+export { emitter }
 export { emitter as defaultEmitter }

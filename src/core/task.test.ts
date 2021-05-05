@@ -26,11 +26,11 @@ it('should be able to run tasks in parallel', async () => {
         }, ms));
     }
     await parallel([
-        task(async () => await timeout(40, 'A')),
-        task(async () => await timeout(600, 'B')),
-        task(async () => await timeout(150, 'C')),
-        task(async () => await timeout(250, 'D')),
-        task(async () => await timeout(320, 'E'))
+        task(async () => await timeout(10, 'A')),
+        task(async () => await timeout(310, 'B')),
+        task(async () => await timeout(70, 'C')),
+        task(async () => await timeout(140, 'D')),
+        task(async () => await timeout(210, 'E'))
     ])
     expect(state).toBe('ACDEB')
 })

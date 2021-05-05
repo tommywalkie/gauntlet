@@ -6,23 +6,18 @@ import {
 } from '../imports/oak.ts'
 import * as esbuild from '../imports/esbuild.ts'
 import { EventEmitter } from '../imports/deno_events.ts'
-import { exists, normalize, walk } from '../imports/std.ts'
-import { register } from './core/watcher.ts'
-import type { FsEvents } from './core/watcher.ts'
-import type { LogEvents } from './core/events.ts'
-
-export interface TsundereEvents extends LogEvents, FsEvents {
-    listen(evt: ApplicationListenEvent): void
-    terminate(): void
-}
+import { exists, walk } from '../imports/std.ts'
+import { registerWatchers } from './core/watcher.ts'
+import { createVirtualFileSystem } from './core/fs.ts'
+import type { GauntletEvents } from './types.ts'
 
 export interface DevServerOptions {
     port: number
     mounts: string[]
-    eventSource?: EventEmitter<TsundereEvents>
+    eventSource?: EventEmitter<GauntletEvents>
 }
 
-function terminate(eventSource: EventEmitter<TsundereEvents>) {
+function terminate(eventSource: EventEmitter<GauntletEvents>) {
     eventSource.emit('debug', 'Intercepted SIGINT signal')
     esbuild.stop()
     eventSource.emit('debug', 'Gracefully stopped the ESBuild service')
@@ -35,7 +30,7 @@ function terminate(eventSource: EventEmitter<TsundereEvents>) {
  * the running ESBuild service.
  */
 async function gracefulExit(
-    eventSource: EventEmitter<TsundereEvents>
+    eventSource: EventEmitter<GauntletEvents>
 ) {
     // Deno.signal is not yet implemented on Windows.
     // https://github.com/denoland/deno/issues/9995
@@ -54,9 +49,30 @@ export async function runDevServer(options: DevServerOptions = {
     port: 8000,
     mounts: [ Deno.cwd() ],
 }) {
-    const eventSource = options.eventSource ?? new EventEmitter<TsundereEvents>()
+    const eventSource = options.eventSource ?? new EventEmitter<GauntletEvents>()
     await esbuild.initialize({}).then(_ => eventSource.emit('debug', 'ESBuild service is ready'))
     const app = new Application()
+    const fs = {
+        cwd: Deno.cwd(),
+        watch: Deno.watchFs,
+        walk,
+        exists,
+        lstat: Deno.lstat,
+        readFile: Deno.readFile
+    }
+
+    /* If you need to test virtual filesystem, simply use this */
+    const vfs = createVirtualFileSystem()
+    vfs.add('./src/A.txt', 'A')
+    vfs.add('./src/B/C.txt', 'C')
+    setTimeout(() => vfs.add('./src/A.txt', 'AA'), 4000)
+    setTimeout(() => vfs.add('./src/B/C.txt', 'D'), 4500)
+    setTimeout(() => vfs.add('./src/D.txt', 'D'), 5000)
+    setTimeout(() => vfs.add('./src/E.txt', 'E'), 5200)
+    setTimeout(() => vfs.add('./src/B/F.txt', 'F'), 5100)
+    setTimeout(() => vfs.remove('./src/B'), 5400)
+    setTimeout(() => vfs.remove('./src/E.txt'), 5900)
+    setTimeout(() => vfs.add('./src/A.txt', 'AAA'), 6400)
 
     app.use(async (context: Context) => {
         context.response.body = "Hello world!";
@@ -64,18 +80,12 @@ export async function runDevServer(options: DevServerOptions = {
 
     app.addEventListener("listen", async (evt: ApplicationListenEvent) => {
         eventSource.emit("listen", evt)
-        const watchers = register({
+        const watchers = registerWatchers({
             mounts: options.mounts,
             eventSource,
-            fs: {
-                cwd: Deno.cwd(),
-                watch: Deno.watchFs,
-                walk,
-                exists,
-                normalize,
-                lstat: Deno.lstat
-            }
+            fs
         })
+
         // Run watchers and listen for SIGINT signals
         await Promise.all([...watchers, await gracefulExit(eventSource)])
     })

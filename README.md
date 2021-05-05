@@ -57,7 +57,7 @@ git clone https://github.com/tommywalkie/gauntlet
 Install the `cli.ts` script as a command-line tool via Deno.
 
 ```shell
-deno install -A --unstable <your-repo>/cli.ts
+deno install -A --unstable --no-check <your-repo>/cli.ts
 # ✅ Successfully installed gauntlet
 ```
 
@@ -70,21 +70,25 @@ gauntlet dev      # Run the development server
 
 ##### Testing
 
-Launch tests with Deno:
+Launch tests with the following Deno command.
+
+**Note**: We need both `-A` and `--unstable` flags in order to launch file watching and build pipeline related tests.
 
 ```shell
-deno test
+deno test -A --unstable
 ```
 
-### Style guide
+#### Style guide
 
 Contributing section is still _work-in-progress_, but here is the basic idea:
 
 - All the platform-agnostic source code shall reside in `src/core/`
 - [Similarly to Meteor projects](https://guide.meteor.com/structure.html#javascript-structure), individual dependencies shall be settled under `imports/`
+- Gauntlet is intended to be built upon, please don't bring any bare import mechanism
+- Avoid cyclic imports
 - Prefer JS/TS/native dependencies over WebAssembly ones unless necessary (_e.g._ ESBuild for the browser)
-- Prefer modularized dependencies over heavy centralized ones using, inter alia, the [`deps.ts` convention](https://deno.land/manual/examples/manage_dependencies) (*i.e.* please don't make accustomed Lodash users vendor the whole `deno.land/x`)
-- Most core features shall be event-driven, using the available `EventEmitter` implementation in `imports/deno_events.ts` which is based on [`deno_events`](https://deno.land/x/deno_events) for type safety
+- Prefer modularized dependencies over heavy centralized ones using, _inter alia_, the [`deps.ts` convention](https://deno.land/manual/examples/manage_dependencies) (*i.e.* please don't make accustomed Lodash users vendor the whole `deno.land/x`)
+- Most core features shall be event-driven, using the available type-safe `EventEmitter` implementation in `imports/deno_events.ts` which is based on [`deno_events`](https://deno.land/x/deno_events)
 - Test files (`**/*.test.ts`) use the available Jest-like matchers in `imports/expect.ts` which are based on [`expect`](https://deno.land/x/expect)
 
 ## License
