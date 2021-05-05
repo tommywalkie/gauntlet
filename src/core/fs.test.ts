@@ -19,7 +19,10 @@ it('should be able to walk a virtual filesystem', async () => {
         entries.push(entry)
     }
     const result = entries.map(el => el.path).join('-')
-    expect(result).toBe('\\A.txt-\\B.txt-\\C-\\C\\D.txt')
+    if (Deno.build.os === 'windows') 
+        expect(result).toBe('\\A.txt-\\B.txt-\\C-\\C\\D.txt')
+    else
+        expect(result).toBe('/A.txt-/B.txt-/C-/C/D.txt')
 })
 
 it('should be able to get stats in a virtual filesystem', async () => {
