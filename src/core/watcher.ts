@@ -40,6 +40,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
         }
     
         async function handleEvent(event: FsEvent) {
+            if (!isWindows) console.log(event)
             const path = event.paths[0]
             if (event.kind === 'create') {
                 await options.fs.lstat(path).then(
