@@ -11,7 +11,6 @@ import type {
 
 export type WatchOptions = {
     recursive?: boolean
-    timeout?: number
 }
 
 /**
@@ -19,9 +18,9 @@ export type WatchOptions = {
  * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs),
  * using `EventEmitter` instead of `rxjs`'s `BehaviourSubject`.
  */
-export class VirtualFs<T = any> extends EventEmitter<FileEvents> implements FileSystemLike {
+export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents> implements FileSystemLike {
     isVirtual: boolean = true
-    cwd: string = './'
+    cwd = () => './'
     private contents = new Map<string, T>();
 
     get size() {
@@ -36,7 +35,7 @@ export class VirtualFs<T = any> extends EventEmitter<FileEvents> implements File
         }
     }
 
-    add(path: string, value?: T): VirtualFs<T> {
+    add(path: string, value?: T): VirtualFileSystem<T> {
         let walkEntry, _exists = false
         const nPath = normalize(path)
         if (this.existsSync(nPath)) {
@@ -60,7 +59,7 @@ export class VirtualFs<T = any> extends EventEmitter<FileEvents> implements File
         return this;
     }
 
-    remove(path: string): VirtualFs<T> {
+    remove(path: string): VirtualFileSystem<T> {
         this.getPaths().forEach(p => {
             if (p.startsWith(normalize(path))) {
                 const walkEntry = this.getEntryFrom(normalize(p));
@@ -71,7 +70,7 @@ export class VirtualFs<T = any> extends EventEmitter<FileEvents> implements File
         return this;
     }
 
-    move(path: string, moveTo: string): VirtualFs<T> {
+    move(path: string, moveTo: string): VirtualFileSystem<T> {
         const children = this.getChildPaths(path);
 
         if (this.contents.has(path)) {
@@ -99,7 +98,7 @@ export class VirtualFs<T = any> extends EventEmitter<FileEvents> implements File
         return this;
     }
 
-    clear(): VirtualFs {
+    clear(): VirtualFileSystem {
         this.contents.clear();
         return this;
     }
@@ -179,12 +178,8 @@ export class VirtualFs<T = any> extends EventEmitter<FileEvents> implements File
                 }
             }, 50);
 
-            let timeoutId: number
-            if (options && options.timeout) {
-                timeoutId = setTimeout(() => it.return(), options.timeout);
-            }
-
-            const possibleEvents: Array<keyof FileEvents> = ['create', 'modify', 'remove']
+            type AcceptedEvents = 'create' | 'modify' | 'remove'
+            const possibleEvents: Array<AcceptedEvents> = ['create', 'modify', 'remove']
             for (let index = 0; index < possibleEvents.length; index++) {
                 const possibleEvent = possibleEvents[index];
                 this.on(possibleEvent, (entry: WalkEntry) => {
@@ -198,7 +193,6 @@ export class VirtualFs<T = any> extends EventEmitter<FileEvents> implements File
         
             return () => {
                 clearInterval(intervalId);
-                if (timeoutId) clearTimeout(timeoutId)
             };
         })
     }
@@ -231,16 +225,16 @@ export class VirtualFs<T = any> extends EventEmitter<FileEvents> implements File
             }, []);
     }
 
-    map<R>(fn: (res: T, path: string) => R): VirtualFs<R> {
-        const res = new VirtualFs<R>();
+    map<R>(fn: (res: T, path: string) => R): VirtualFileSystem<R> {
+        const res = new VirtualFileSystem<R>();
         this.contents.forEach((item, key) => {
             res.add(key, fn(item, key) as R);
         });
         return res;
     }
 
-    filter(fn: (res: T, path: string) => boolean): VirtualFs<T> {
-        const res = new VirtualFs();
+    filter(fn: (res: T, path: string) => boolean): VirtualFileSystem<T> {
+        const res = new VirtualFileSystem();
         this.contents.forEach((item, key) => {
             if (fn(item, key)) {
                 res.add(key, item);
@@ -252,11 +246,11 @@ export class VirtualFs<T = any> extends EventEmitter<FileEvents> implements File
 
 /**
  * Generates a virtual filesystem implementing all methods from
- * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs)'s `VirtualFs<T>` class,
+ * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs)'s `VirtualFileSystem<T>` class,
  * plus `FileSystemLike` bindings including `lstat`, `walk`, `exists`, etc.
  */
-export function createVirtualFileSystem<T = any>(): FileSystemLike & VirtualFs<T> {
-    return new VirtualFs()
+export function createVirtualFileSystem<T = any>(): VirtualFileSystem<T> {
+    return new VirtualFileSystem()
 }
 
 export type { FsEvent, FileEvents, FileSystemLike, WalkEntry }

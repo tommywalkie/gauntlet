@@ -2,46 +2,46 @@ import type { DenoManifest } from '../../imports/deno_run.ts'
 
 export type SingleOrPair<T> = [T] | [T, T]
 
-export type ProgramInput = boolean | string | number
+export type Input = boolean | string | number
 
-export interface ProgramContext {
-    commands: Array<ProgramInput>
-    options: Record<string, ProgramInput>
-    values: Array<ProgramInput>
+export interface Context {
+    commands: Array<Input>
+    options: Record<string, Input>
+    values: Array<Input>
 }
 
-export type ProgramCallback<T = any> = (props: ProgramCallbackProps) => Promise<T>
+export type Callback<T = any> = (props: CallbackProps) => Promise<T>
 
-export interface ProgramCallbackProps extends Omit<ProgramContext, "commands"> {
+export interface CallbackProps extends Omit<Context, "commands"> {
     manifest: DenoManifest
-    options: Record<string, ProgramInput>
-    values: Array<ProgramInput>
+    options: Record<string, Input>
+    values: Array<Input>
     [key: string]: any
 }
 
-export interface ProgramOption {
+export interface Option {
     aliases: SingleOrPair<string>
     description: string
     defaultValue: string | boolean
 }
 
-export interface ProgramFlag extends Omit<ProgramOption, "defaultValue"> {
+export interface Flag extends Omit<Option, "defaultValue"> {
     defaultValue: boolean
 }
 
-export interface ProgramCommand {
+export interface Command {
     alias: string
     description: string
-    callback: ProgramCallback
+    callback: Callback
     examples: string[]
 }
 
 export interface Program {
-    command(alias: string, description: string, callback: ProgramCallback): Program
-    flag(aliases: SingleOrPair<string>, description: string): Program
-    option(aliases: SingleOrPair<string>, description: string, defaultValue: ProgramInput): Program
-    help(context: ProgramContext): void
-    parse(args: string[]): ProgramContext
-    fallback(callback: ProgramCallback): Program
+    command(alias: string, description: string, callback: Callback): this
+    flag(aliases: SingleOrPair<string>, description: string): this
+    option(aliases: SingleOrPair<string>, description: string, defaultValue: Input): this
+    help(context: Context): void
+    parse(args: string[]): Context
+    fallback(callback: Callback): this
     run(): Promise<void>
 }

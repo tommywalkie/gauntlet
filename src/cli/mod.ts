@@ -1,11 +1,12 @@
 import type {
-    ProgramInput,
-    ProgramCommand,
-    ProgramFlag,
-    ProgramOption,
+    Input,
+    Command,
+    Flag,
+    Option,
     SingleOrPair,
-    ProgramCallback,
-    ProgramContext
+    Callback,
+    Context,
+    Program
 } from './types.ts'
 
 import { docopt, LICENSE, VERSION } from './docopt.ts'
@@ -14,7 +15,7 @@ import { manifest } from '../../manifest.ts'
 export const FLAG_PATTERN: RegExp = /^\-\-?(?<flag>[a-zA-Z]+)$/
 export const OPTION_PATTERN: RegExp = /^\-\-?(?<flag>[a-zA-Z]+)[\= ](?<value>[\w\\\/\:\.\,\@]+)$/
 
-export function sanitizeValue(value: ProgramInput) {
+export function sanitizeValue(value: Input) {
     return value === 'true' ? true : value === 'false' ? false : value
 }
 
@@ -28,11 +29,11 @@ function __aliases(collection: Record<string, any>): Array<string> {
         .reduce(uniques, [])
 }
 
-export class Program {
-    commands: Array<ProgramCommand> = []
-    flags: Record<string, ProgramFlag>[] = []
-    options: Record<string, ProgramOption>[] = []
-    private __fallback: ProgramCallback = 
+export class ProgramInstance implements Program {
+    commands: Array<Command> = []
+    flags: Record<string, Flag>[] = []
+    options: Record<string, Option>[] = []
+    private __fallback: Callback = 
         async(inputs: any) => this.help(inputs)
     flag(
         aliases: SingleOrPair<string>,
@@ -40,36 +41,36 @@ export class Program {
     ) {
         aliases.forEach((label: string) =>
             (this.flags as any)[label] =
-                {aliases, description, defaultValue: false} as ProgramFlag)
+                {aliases, description, defaultValue: false} as Flag)
         return this
     }
     option(
         aliases: SingleOrPair<string>,
         description: string = '',
-        defaultValue: ProgramInput = false
+        defaultValue: Input = false
     ) {
         aliases.forEach((label: string) =>
             (this.options as any)[label] =
-                {aliases, description, defaultValue} as ProgramOption)
+                {aliases, description, defaultValue} as Option)
         return this
     }
     command(
         alias: string,
         description: string = '',
-        callback: ProgramCallback,
+        callback: Callback,
         examples: string[] = []
     ) {
         (this.commands as any)[alias] =
-            {alias, description, callback, examples} as ProgramCommand
+            {alias, description, callback, examples} as Command
         return this
     }
-    private help(parsed: ProgramContext) {
+    help(parsed: Context) {
         console.log(docopt(this.commands, this.options, this.flags))
     }
     parse = (
         args: string[] = [...Deno.args]
-    ): ProgramContext => {
-        let options: Record<string, ProgramInput> = {}
+    ): Context => {
+        let options: Record<string, Input> = {}
         let values: string[] = []
         let commands: string[] = []
         let __expect_command: boolean = true
@@ -121,7 +122,7 @@ export class Program {
         })
         return {commands, options, values}
     }
-    public fallback(callback: ProgramCallback) {
+    public fallback(callback: Callback) {
         this.__fallback = callback
         return this
     }
@@ -153,5 +154,5 @@ export class Program {
 }
 
 export function setupProgram() {
-    return new Program()
+    return new ProgramInstance()
 }

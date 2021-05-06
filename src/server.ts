@@ -6,18 +6,18 @@ import {
 } from '../imports/oak.ts'
 import * as esbuild from '../imports/esbuild.ts'
 import { EventEmitter } from '../imports/deno_events.ts'
-import { exists, walk } from '../imports/std.ts'
-import { registerWatchers } from './core/watcher.ts'
+import { watchFs } from './core/watcher.ts'
 import { createVirtualFileSystem } from './core/fs.ts'
-import type { GauntletEvents } from './types.ts'
+import { denoFs } from './fs.ts'
+import type { Gauntlet } from './types.ts'
 
 export interface DevServerOptions {
     port: number
     mounts: string[]
-    eventSource?: EventEmitter<GauntletEvents>
+    eventSource?: EventEmitter<Gauntlet.Events>
 }
 
-function terminate(eventSource: EventEmitter<GauntletEvents>) {
+function terminate(eventSource: EventEmitter<Gauntlet.Events>) {
     eventSource.emit('debug', 'Intercepted SIGINT signal')
     esbuild.stop()
     eventSource.emit('debug', 'Gracefully stopped the ESBuild service')
@@ -30,7 +30,7 @@ function terminate(eventSource: EventEmitter<GauntletEvents>) {
  * the running ESBuild service.
  */
 async function gracefulExit(
-    eventSource: EventEmitter<GauntletEvents>
+    eventSource: EventEmitter<Gauntlet.Events>
 ) {
     // Deno.signal is not yet implemented on Windows.
     // https://github.com/denoland/deno/issues/9995
@@ -49,17 +49,9 @@ export async function runDevServer(options: DevServerOptions = {
     port: 8000,
     mounts: [ Deno.cwd() ],
 }) {
-    const eventSource = options.eventSource ?? new EventEmitter<GauntletEvents>()
+    const eventSource = options.eventSource ?? new EventEmitter<Gauntlet.Events>()
     await esbuild.initialize({}).then(_ => eventSource.emit('debug', 'ESBuild service is ready'))
     const app = new Application()
-    const fs = {
-        cwd: Deno.cwd(),
-        watch: Deno.watchFs,
-        walk,
-        exists,
-        lstat: Deno.lstat,
-        readFile: Deno.readFile
-    }
 
     /* If you need to test virtual filesystem, simply use this */
     const vfs = createVirtualFileSystem()
@@ -80,12 +72,11 @@ export async function runDevServer(options: DevServerOptions = {
 
     app.addEventListener("listen", async (evt: ApplicationListenEvent) => {
         eventSource.emit("listen", evt)
-        const watchers = registerWatchers({
-            mounts: options.mounts,
-            eventSource,
-            fs
+        const watchers = options.mounts.map(async (mount) => {
+            for await (const event of watchFs({ source: mount, fs: denoFs })) {
+                eventSource.emit(event.kind, event.entry)
+            }
         })
-
         // Run watchers and listen for SIGINT signals
         await Promise.all([...watchers, await gracefulExit(eventSource)])
     })

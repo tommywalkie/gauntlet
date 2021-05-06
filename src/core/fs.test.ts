@@ -66,7 +66,9 @@ it('should be able to watch a virtual filesystem', async () => {
     setTimeout(() => fs.add('/B.txt', 'B'), 150)
     setTimeout(() => fs.add('/A.txt', 'C'), 250)
     setTimeout(() => fs.remove('/B.txt'), 320)
-    for await (const event of fs.watch('/', { timeout: 600 })) {
+    const watcher = fs.watch('/')
+    setTimeout(() => { (watcher as any).return(); }, 400);
+    for await (const event of watcher) {
         incr.push(event.kind)
     }
     expect(incr.join()).toBe('create,create,modify,remove')

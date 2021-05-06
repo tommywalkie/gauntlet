@@ -8,6 +8,7 @@ export interface FileEvents {
     modify(path: WalkEntry): void;
     create(path: WalkEntry): void;
     remove(path: WalkEntry): void;
+    watch(entry: WalkEntry): void;
 }
 
 /**
@@ -20,6 +21,16 @@ export interface LogEvents {
     warn(description: string): void
     info(description: string): void
     debug(description: string): void
+}
+
+export interface WatchEvent {
+    kind: keyof FileEvents
+    entry: WalkEntry
+}
+
+export interface WatcherOptions {
+    source: string,
+    fs: FileSystemLike
 }
 
 // Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
@@ -239,7 +250,7 @@ export interface SnowpackConfig {
  * Base filesystem bindings for watchers
  */
 export interface FileSystemLike {
-    cwd: string
+    cwd: () => string
     readFile: (path: string) => Promise<Uint8Array>
     exists: (filePath: string) => Promise<boolean>
     lstat: (path: string) => Promise<Omit<Omit<WalkEntry, "name">, "path">>

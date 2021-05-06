@@ -19,6 +19,17 @@ export async function toArray<T = any>(asyncIterator: AsyncIterableIterator<T>):
 }
 
 /**
+ * Takes an async interator and returns an array
+ */
+ export function toArraySync<T = any>(asyncIterator: AsyncIterableIterator<T>): Array<T> { 
+    const arr: Array<T> = [];
+    (async () => {
+        await toArray(asyncIterator)
+    })()
+    return arr
+}
+
+/**
  * Takes a string and returns an `Uint8Array`.
  * Source: https://gist.github.com/NejcZdovc/447d730e0aada3771da7b88804d010f2
  */
