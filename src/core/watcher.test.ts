@@ -104,8 +104,6 @@ it('should be able to track file saves', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
-    console.log(occuredEvents)
-
     const isMacOS = Deno.build.os === 'darwin'
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
@@ -156,7 +154,7 @@ it('should be able to track renames via Deno.rename()', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
-    console.log(occuredEvents)
+    console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
 
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
@@ -187,7 +185,9 @@ it('should be able to track renames via Visual Studio Code', async () => {
     // Deno.rename() behavior
     setTimeout(async () => {
         await Deno.remove(file0).then(async _ => {
-            await Deno.writeFile(file1, data0)
+            setTimeout(async () => {
+                await Deno.writeFile(file1, data0)
+            }, 300)
         })
     }, 240)
 
@@ -200,7 +200,7 @@ it('should be able to track renames via Visual Studio Code', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
-    console.log(occuredEvents)
+    console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
 
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
