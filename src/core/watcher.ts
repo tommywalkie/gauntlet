@@ -40,64 +40,63 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
         }
     
         async function handleEvent(event: FsEvent) {
-            for await (const path of event.paths) {
-                if (event.kind === 'create') {
-                    await options.fs.lstat(path).then(
-                        async ({ isFile, isDirectory, isSymlink }) => {
-                            const entry = {
-                                path: join(options.source, format(path)),
-                                name: normalize(path).replace(/^.*[\\\/]/, ''),
-                                isFile,
-                                isDirectory,
-                                isSymlink
-                            }
-                            if (isFile) {
-                                contents.push(entry)
-                                events.push({ _id: randomId(), kind: event.kind as any, entry })
-                            }
-                            else if (isDirectory) {
-                                // Just in case folder file events happen before the one for the folder
-                                setTimeout(async() => await refreshSource(), 1200)
-                            }
+            const path = event.paths[0]
+            if (event.kind === 'create') {
+                await options.fs.lstat(path).then(
+                    async ({ isFile, isDirectory, isSymlink }) => {
+                        const entry = {
+                            path: join(options.source, format(path)),
+                            name: normalize(path).replace(/^.*[\\\/]/, ''),
+                            isFile,
+                            isDirectory,
+                            isSymlink
                         }
-                    )
-                }
-                if (event.kind === 'remove' || event.kind === 'modify') {
-                    const entry = contents.find(
-                        content => content.path === join(options.source, format(path))
-                    )
-                    if (entry?.isFile) {
-                        if (event.kind === 'remove') {
-                            contents = contents.filter(
-                                content => content.path !== join(options.source, format(path))
-                            )
+                        if (isFile) {
+                            contents.push(entry)
+                            events.push({ _id: randomId(), kind: event.kind as any, entry })
+                        }
+                        else if (isDirectory) {
+                            // Just in case folder file events happen before the one for the folder
+                            setTimeout(async() => await refreshSource(), 1200)
+                        }
+                    }
+                ).catch(async () => await refreshSource())
+            }
+            if (event.kind === 'remove' || event.kind === 'modify') {
+                const entry = contents.find(
+                    content => content.path === join(options.source, format(path))
+                )
+                if (entry?.isFile) {
+                    if (event.kind === 'remove') {
+                        contents = contents.filter(
+                            content => content.path !== join(options.source, format(path))
+                        )
+                        events.push({ _id: randomId(), kind: event.kind, entry })
+                    }
+                    else {
+                        // A file rename can happen in two ways:
+                        // - A direct metadata change (Deno.rename())
+                        // - A removal/creation of a file (like VS Code, see:
+                        // https://github.com/microsoft/vscode/blob/94c9ea46838a9a619aeafb7e8afd1170c967bb55/src/vs/workbench/contrib/files/common/explorerModel.ts#L158-L167)
+                        //
+                        // This means we need to track if the said file
+                        // which fired a 'modify' event actually exists.
+                        // If not, this is probably a move/rename, so we refresh the source
+                        // to make sure about it.
+                        if (await options.fs.exists(normalize(entry.path)))
                             events.push({ _id: randomId(), kind: event.kind, entry })
-                        }
-                        else {
-                            // A file rename can happen in two ways:
-                            // - A direct metadata change (Deno.rename())
-                            // - A removal/creation of a file (like VS Code, see:
-                            // https://github.com/microsoft/vscode/blob/94c9ea46838a9a619aeafb7e8afd1170c967bb55/src/vs/workbench/contrib/files/common/explorerModel.ts#L158-L167)
-                            //
-                            // This means we need to track if the said file
-                            // which fired a 'modify' event actually exists.
-                            // If not, this is probably a move/rename, so we refresh the source
-                            // to make sure about it.
-                            if (await options.fs.exists(normalize(entry.path)))
-                                events.push({ _id: randomId(), kind: event.kind, entry })
-                            else await refreshSource()
-                        }
+                        else await refreshSource()
                     }
-                    if (entry?.isDirectory) {
-                        // When renaming folders, at least on Windows, 3 'modify' events may fire:
-                        // - One for the OLD NAMED folder
-                        // - One for the NEWLY NAMED folder
-                        // - One for the PARENT folder
-                        // This is a workaround in order to de-duplicate events
-                        await options.fs.lstat(entry.path).then(
-                            async _ => await refreshSource()
-                        ).catch(() => {})
-                    }
+                }
+                if (entry?.isDirectory) {
+                    // When renaming folders, at least on Windows, 3 'modify' events may fire:
+                    // - One for the OLD NAMED folder
+                    // - One for the NEWLY NAMED folder
+                    // - One for the PARENT folder
+                    // This is a workaround in order to de-duplicate events
+                    await options.fs.lstat(entry.path).then(
+                        async _ => await refreshSource()
+                    ).catch(() => {})
                 }
             }
         }
