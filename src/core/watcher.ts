@@ -42,22 +42,25 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
         async function handleEvent(event: FsEvent) {
             for await (const path of event.paths) {
                 if (event.kind === 'create') {
-                    const { isFile, isDirectory, isSymlink } = await options.fs.lstat(path)
-                    const entry = {
-                        path: join(options.source, format(path)),
-                        name: normalize(path).replace(/^.*[\\\/]/, ''),
-                        isFile,
-                        isDirectory,
-                        isSymlink
-                    }
-                    if (isFile) {
-                        contents.push(entry)
-                        events.push({ _id: randomId(), kind: event.kind, entry })
-                    }
-                    else if (isDirectory) {
-                        // Just in case folder file events happen before the one for the folder
-                        setTimeout(async() => await refreshSource(), 1200)
-                    }
+                    await options.fs.lstat(path).then(
+                        async ({ isFile, isDirectory, isSymlink }) => {
+                            const entry = {
+                                path: join(options.source, format(path)),
+                                name: normalize(path).replace(/^.*[\\\/]/, ''),
+                                isFile,
+                                isDirectory,
+                                isSymlink
+                            }
+                            if (isFile) {
+                                contents.push(entry)
+                                events.push({ _id: randomId(), kind: event.kind as any, entry })
+                            }
+                            else if (isDirectory) {
+                                // Just in case folder file events happen before the one for the folder
+                                setTimeout(async() => await refreshSource(), 1200)
+                            }
+                        }
+                    )
                 }
                 if (event.kind === 'remove' || event.kind === 'modify') {
                     const entry = contents.find(
@@ -122,39 +125,26 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
             })
         }
     
-        if (isWindows) {
-            (async () => {
-                contents = await toArray<WalkEntry>(srcIterator)
-                
-                // This is meant to de-duplicate ReadDirectoryChangesW events
-                const cache: Map<string, number> = new Map()
-                async function updateCache(event: FsEvent) {
-                    cache.set(event.paths.toString(), Date.now() + 100)
-                    await handleEvent(event)
-                }
+        (async () => {
+            contents = await toArray<WalkEntry>(srcIterator)
+            
+            // This is meant to de-duplicate ReadDirectoryChangesW events
+            const cache: Map<string, number> = new Map()
+            async function updateCache(event: FsEvent) {
+                cache.set(event.paths.toString(), Date.now() + 100)
+                await handleEvent(event)
+            }
 
-                await notifyStart()
+            await notifyStart()
 
-                for await (const event of watcher) {
-                    const entry = cache.get(event.paths.toString())
-                    if (entry) {
-                        if (Date.now() > entry) await updateCache(event)
-                    }
-                    else updateCache(event)
+            for await (const event of watcher) {
+                const entry = cache.get(event.paths.toString())
+                if (entry) {
+                    if (Date.now() > entry) await updateCache(event)
                 }
-            })()
-        }
-        else {
-            (async () => {
-                contents = await toArray<WalkEntry>(srcIterator)
-                
-                await notifyStart()
-                
-                for await (const event of watcher) {
-                    await handleEvent(event)
-                }
-            })()
-        }
+                else updateCache(event)
+            }
+        })()
     
         return () => {
             clearInterval(intervalId);

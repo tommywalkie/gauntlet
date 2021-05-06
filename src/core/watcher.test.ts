@@ -93,7 +93,7 @@ it('should be able to detect file saves', async () => {
 
     setTimeout(async () => {
         await Deno.writeFile(file0, data2)
-    }, 340)
+    }, 520)
 
     // Launch the watcher and record events
     const occuredEvents = []
