@@ -43,13 +43,13 @@ it('should be able to track newly added files', async () => {
 
     setTimeout(async () => {
         await Deno.mkdir(dirname(file0), { recursive: true })
-        await Deno.writeFile(file0, data)
+        await Deno.writeFile(file0, data).then(async _ => {
+            setTimeout(async () => {
+                await Deno.mkdir(dirname(file1), { recursive: true })
+                await Deno.writeFile(file1, data)
+            }, 400)
+        })
     }, 120)
-
-    setTimeout(async () => {
-        await Deno.mkdir(dirname(file1), { recursive: true })
-        await Deno.writeFile(file1, data)
-    }, 450)
 
     // Launch the watcher and record events
     const occuredEvents = []
