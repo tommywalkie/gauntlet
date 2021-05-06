@@ -200,8 +200,6 @@ it('should be able to track renames via Visual Studio Code', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
-    console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
-
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
     expect(occuredEvents[1].kind).toBe('remove')

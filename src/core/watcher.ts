@@ -62,7 +62,9 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                                 setTimeout(async() => await refreshSource(), 1200)
                             }
                         }
-                    ).catch(async () => await refreshSource())
+                    ).catch(async () => {
+                        setTimeout(async() => await refreshSource(), 1200)
+                    })
                 }
                 if (event.kind === 'remove' || event.kind === 'modify') {
                     const entry = contents.find(
