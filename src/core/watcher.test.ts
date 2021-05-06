@@ -26,7 +26,7 @@ it('should be able to run and pause a Gauntlet watcher', async () => {
     expect(true).toBeTruthy()
 })
 
-it('should be able to detect newly added files', async () => {
+it('should be able to track newly added files', async () => {
     const tempDirName = join(Deno.cwd(), "/foo")
     await Deno.mkdir(tempDirName, { recursive: true })
     const watcher = watchFs({ source: "./foo", fs: denoFs })
@@ -49,7 +49,7 @@ it('should be able to detect newly added files', async () => {
     setTimeout(async () => {
         await Deno.mkdir(dirname(file1), { recursive: true })
         await Deno.writeFile(file1, data)
-    }, 240)
+    }, 450)
 
     // Launch the watcher and record events
     const occuredEvents = []
@@ -60,8 +60,6 @@ it('should be able to detect newly added files', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
-    console.log(occuredEvents)
-
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
     expect(occuredEvents[1].kind).toBe('create')
@@ -71,7 +69,7 @@ it('should be able to detect newly added files', async () => {
     expect(occuredEvents[2].kind).toBe('create')
 })
 
-it('should be able to detect file saves', async () => {
+it('should be able to track file saves', async () => {
     const tempDirName = join(Deno.cwd(), "/foo")
     await Deno.mkdir(tempDirName, { recursive: true })
     const watcher = watchFs({ source: "./foo", fs: denoFs })
@@ -91,7 +89,7 @@ it('should be able to detect file saves', async () => {
 
     setTimeout(async () => {
         await Deno.writeFile(file0, data1)
-    }, 240)
+    }, 120)
 
     setTimeout(async () => {
         await Deno.writeFile(file0, data2)
@@ -108,11 +106,22 @@ it('should be able to detect file saves', async () => {
 
     console.log(occuredEvents)
 
+    const isMacOS = Deno.build.os === 'darwin'
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
-    expect(occuredEvents[1].kind).toBe('modify')
+
+    if (isMacOS)
+        expect(occuredEvents[1].kind).toBe('create')
+    else
+        expect(occuredEvents[1].kind).toBe('modify')
+
     expect(occuredEvents[1].entry.name).toBe('A.txt')
-    expect(occuredEvents[2].kind).toBe('modify')
+
+    if (isMacOS)
+        expect(occuredEvents[1].kind).toBe('create')
+    else
+        expect(occuredEvents[1].kind).toBe('modify')
+
     expect(occuredEvents[2].entry.name).toBe('A.txt')
 })
 
@@ -177,8 +186,9 @@ it('should be able to track renames via Visual Studio Code', async () => {
 
     // Deno.rename() behavior
     setTimeout(async () => {
-        await Deno.remove(file0)
-        await Deno.writeFile(file1, data0)
+        await Deno.remove(file0).then(async _ => {
+            await Deno.writeFile(file1, data0)
+        })
     }, 240)
 
     // Launch the watcher and record events

@@ -130,7 +130,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
             // This is meant to de-duplicate ReadDirectoryChangesW events
             const cache: Map<string, number> = new Map()
             async function updateCache(event: FsEvent) {
-                cache.set(event.paths.toString(), Date.now() + 100)
+                cache.set(event.paths.toString(), Date.now() + (isWindows ? 100 : 250))
                 await handleEvent(event)
             }
 
