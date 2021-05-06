@@ -60,6 +60,8 @@ it('should be able to detect newly added files', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
+    console.log(occuredEvents)
+
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
     expect(occuredEvents[1].kind).toBe('create')
@@ -104,6 +106,8 @@ it('should be able to detect file saves', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
+    console.log(occuredEvents)
+
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
     expect(occuredEvents[1].kind).toBe('modify')
@@ -142,6 +146,8 @@ it('should be able to track renames via Deno.rename()', async () => {
 
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
+
+    console.log(occuredEvents)
 
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
@@ -183,6 +189,8 @@ it('should be able to track renames via Visual Studio Code', async () => {
 
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
+
+    console.log(occuredEvents)
 
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
