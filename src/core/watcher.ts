@@ -43,6 +43,16 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
             if (isMac) console.log(event)
             if (event.paths.length === 1) {
                 const path = event.paths[0]
+                const entry = contents.find(
+                    content => content.path === join(options.source, format(path))
+                )
+                if (isMac) {
+                    console.log(entry)
+                    if (entry) event.kind === 'modify'
+                    if (!await options.fs.exists(normalize(path))) {
+                        event.kind === 'remove'
+                    }
+                }
                 if (event.kind === 'create') {
                     await options.fs.lstat(path).then(
                         async ({ isFile, isDirectory, isSymlink }) => {
@@ -67,10 +77,6 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                     })
                 }
                 if (event.kind === 'remove' || event.kind === 'modify') {
-                    const entry = contents.find(
-                        content => content.path === join(options.source, format(path))
-                    )
-                    if (isMac) console.log(entry)
                     if (entry?.isFile) {
                         if (event.kind === 'remove') {
                             contents = contents.filter(
