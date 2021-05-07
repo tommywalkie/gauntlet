@@ -1,11 +1,12 @@
-import { exists, walk } from '../imports/std.ts'
+import { existsSync, walkSync } from '../imports/std.ts'
+import { FileSystemLike } from './core/types.ts'
 
-export const fs = {
+export const fs: FileSystemLike = {
     cwd: () => Deno.cwd(),
     watch: Deno.watchFs,
-    walk,
-    exists,
-    lstat: Deno.lstat,
+    walkSync,
+    existsSync,
+    lstatSync: Deno.lstatSync,
     readFile: Deno.readFile
 }
 

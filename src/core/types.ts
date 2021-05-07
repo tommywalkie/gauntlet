@@ -252,8 +252,8 @@ export interface SnowpackConfig {
 export interface FileSystemLike {
     cwd: () => string
     readFile: (path: string) => Promise<Uint8Array>
-    exists: (filePath: string) => Promise<boolean>
-    lstat: (path: string) => Promise<Omit<Omit<WalkEntry, "name">, "path">>
-    walk: (currentPath: string) => AsyncIterableIterator<WalkEntry>
+    existsSync: (filePath: string) => boolean
+    lstatSync: (path: string) => Omit<Omit<WalkEntry, "name">, "path">
+    walkSync: (currentPath: string) => IterableIterator<WalkEntry>
     watch: (paths: string | string[], options?: { recursive: boolean }) => AsyncIterableIterator<FsEvent>
 }

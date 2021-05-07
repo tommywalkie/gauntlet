@@ -19,14 +19,10 @@ export async function toArray<T = any>(asyncIterator: AsyncIterableIterator<T>):
 }
 
 /**
- * Takes an async interator and returns an array
+ * Takes an interator and returns an array
  */
- export function toArraySync<T = any>(asyncIterator: AsyncIterableIterator<T>): Array<T> { 
-    const arr: Array<T> = [];
-    (async () => {
-        await toArray(asyncIterator)
-    })()
-    return arr
+ export function toArraySync<T = any>(it: IterableIterator<T>): Array<T> { 
+    return [...it]
 }
 
 /**

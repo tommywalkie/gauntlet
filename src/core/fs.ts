@@ -150,6 +150,18 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents> impleme
         return createAsyncIterable(this.getChildPaths(normalize(currentPath)))
     }
 
+    walkSync(currentPath: string) {
+        const _this = this
+        function* createAsyncIterable(syncIterable: Array<any>) {
+            for (const elem of syncIterable) {
+                const stats = _this.lstatSync(elem)
+                const entry = { name: elem.replace(/^.*[\\\/]/, ''), path: elem, ...stats }
+                yield entry;
+            }
+        }
+        return createAsyncIterable(this.getChildPaths(normalize(currentPath)))
+    }
+
     watch(paths: string | string[], options?: WatchOptions): AsyncPushIterator<FsEvent> {
         let events: Array<FsEvent & { _id: string }> = []
         return new AsyncPushIterator<FsEvent>((it) => {
