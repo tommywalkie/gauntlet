@@ -4,6 +4,8 @@ import { denoFs } from '../fs.ts'
 import { watchFs } from './watcher.ts'
 import { join } from '../../imports/path.ts'
 
+const DELAY = Deno.build.os === 'darwin' ? 5000 : 2500
+
 it('should be able to run and pause a Deno.watchFs watcher', async () => {
     const watcher = Deno.watchFs("./");
     setTimeout(() => { (watcher as any).return(); }, 300);
@@ -34,7 +36,7 @@ it('should be able to track newly added files', async () => {
     const occuredEvents: any[] = []
 
     // @ts-ignore
-    setTimeout(() => watcher.return(), 2500)
+    setTimeout(() => watcher.return(), DELAY)
 
     // Launch the watcher and record events
     for await (const event of watcher) {
@@ -62,7 +64,7 @@ it('should be able to track file saves', async () => {
     const occuredEvents = []
 
     // @ts-ignore
-    setTimeout(() => watcher.return(), 2500)
+    setTimeout(() => watcher.return(), DELAY)
 
     // Launch the watcher and record events
     for await (const event of watcher) {
@@ -94,7 +96,7 @@ it('should be able to track file renames via Deno.rename()', async () => {
     const watcher = watchFs({ source: "./foo", fs: denoFs })
     const occuredEvents = []
 
-    setTimeout(() => (watcher as any).return(), 2500)
+    setTimeout(() => (watcher as any).return(), DELAY)
 
     for await (const event of watcher) {
         occuredEvents.push(event)
@@ -121,7 +123,7 @@ it('should be able to track file renames via Visual Studio Code', async () => {
     const watcher = watchFs({ source: "./foo", fs: denoFs })
     const occuredEvents = []
 
-    setTimeout(() => (watcher as any).return(), 2500)
+    setTimeout(() => (watcher as any).return(), DELAY)
 
     for await (const event of watcher) {
         occuredEvents.push(event)
