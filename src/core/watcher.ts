@@ -1,12 +1,11 @@
 import { isWindows } from '../../imports/std.ts'
 import { AsyncPushIterator } from '../../imports/graphqlade.ts'
 import { join, normalize } from '../../imports/path.ts'
-import { getOS, toArray, randomId } from './utils.ts'
+import { toArray, randomId } from './utils.ts'
 import type { FsEvent, WalkEntry } from './fs.ts'
 import type { WatchEvent, WatcherOptions } from './types.ts'
 
 export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEvent> {
-    const OS = getOS()
     return new AsyncPushIterator<WatchEvent>((iterator) => {
         let events: Array<WatchEvent & { _id: string }> = []
         const watcher = options.fs.watch(join(options.fs.cwd(), options.source))
@@ -45,32 +44,27 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
             if (event.paths.length === 1) {
                 const path = event.paths[0]
                 if (event.kind === 'create') {
-                    if (OS === 'darwin') {
-                        setTimeout(async() => await refreshSource(), 1200)
-                    }
-                    else {
-                        await options.fs.lstat(path).then(
-                            async ({ isFile, isDirectory, isSymlink }) => {
-                                const entry = {
-                                    path: join(options.source, format(path)),
-                                    name: normalize(path).replace(/^.*[\\\/]/, ''),
-                                    isFile,
-                                    isDirectory,
-                                    isSymlink
-                                }
-                                if (isFile) {
-                                    contents.push(entry)
-                                    events.push({ _id: randomId(), kind: event.kind as any, entry })
-                                }
-                                else if (isDirectory) {
-                                    // Just in case folder file events happen before the one for the folder
-                                    setTimeout(async() => await refreshSource(), 1200)
-                                }
+                    await options.fs.lstat(path).then(
+                        async ({ isFile, isDirectory, isSymlink }) => {
+                            const entry = {
+                                path: join(options.source, format(path)),
+                                name: normalize(path).replace(/^.*[\\\/]/, ''),
+                                isFile,
+                                isDirectory,
+                                isSymlink
                             }
-                        ).catch(async () => {
-                            setTimeout(async() => await refreshSource(), 1200)
-                        })
-                    }
+                            if (isFile) {
+                                contents.push(entry)
+                                events.push({ _id: randomId(), kind: event.kind as any, entry })
+                            }
+                            else if (isDirectory) {
+                                // Just in case folder file events happen before the one for the folder
+                                setTimeout(async() => await refreshSource(), 1200)
+                            }
+                        }
+                    ).catch(async () => {
+                        setTimeout(async() => await refreshSource(), 1200)
+                    })
                 }
                 if (event.kind === 'remove' || event.kind === 'modify') {
                     const entry = contents.find(
@@ -141,7 +135,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
             // This is meant to de-duplicate ReadDirectoryChangesW events
             const cache: Map<string, number> = new Map()
             async function updateCache(event: FsEvent) {
-                cache.set(event.paths.toString(), Date.now() + (isWindows ? 100 : 250))
+                cache.set(event.paths.toString(), Date.now() + 100)
                 await handleEvent(event)
             }
 
