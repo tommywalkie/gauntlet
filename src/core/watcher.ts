@@ -40,7 +40,6 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
         }
     
         async function handleEvent(event: FsEvent) {
-            if (!isWindows) console.log(event)
             if (event.paths.length === 1) {
                 const path = event.paths[0]
                 if (event.kind === 'create') {
@@ -98,9 +97,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                         // - One for the NEWLY NAMED folder
                         // - One for the PARENT folder
                         // This is a workaround in order to de-duplicate events
-                        await options.fs.lstat(entry.path).then(
-                            async _ => await refreshSource()
-                        ).catch(() => {})
+                        setTimeout(async() => await refreshSource(), 1200)
                     }
                 }
             }

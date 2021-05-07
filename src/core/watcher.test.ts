@@ -104,26 +104,15 @@ it('should be able to track file saves', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
-    const isMacOS = Deno.build.os === 'darwin'
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
-
-    if (isMacOS)
-        expect(occuredEvents[1].kind).toBe('create')
-    else
-        expect(occuredEvents[1].kind).toBe('modify')
-
+    expect(occuredEvents[1].kind).toBe('modify')
     expect(occuredEvents[1].entry.name).toBe('A.txt')
-
-    if (isMacOS)
-        expect(occuredEvents[1].kind).toBe('create')
-    else
-        expect(occuredEvents[1].kind).toBe('modify')
-
+    expect(occuredEvents[1].kind).toBe('modify')
     expect(occuredEvents[2].entry.name).toBe('A.txt')
 })
 
-it('should be able to track renames via Deno.rename()', async () => {
+it('should be able to track file renames via Deno.rename()', async () => {
     const tempDirName = join(Deno.cwd(), "/foo")
     await Deno.mkdir(tempDirName, { recursive: true })
     const watcher = watchFs({ source: "./foo", fs: denoFs })
@@ -154,8 +143,6 @@ it('should be able to track renames via Deno.rename()', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
-    console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
-
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
     expect(occuredEvents[1].kind).toBe('remove')
@@ -164,8 +151,7 @@ it('should be able to track renames via Deno.rename()', async () => {
     expect(occuredEvents[2].entry.name).toBe('B.txt')
 })
 
-// cf: https://github.com/microsoft/vscode/blob/94c9ea46838a9a619aeafb7e8afd1170c967bb55/src/vs/workbench/contrib/files/common/explorerModel.ts#L158-L167
-it('should be able to track renames via Visual Studio Code', async () => {
+it('should be able to track file renames via Visual Studio Code', async () => {
     const tempDirName = join(Deno.cwd(), "/foo")
     await Deno.mkdir(tempDirName, { recursive: true })
     const watcher = watchFs({ source: "./foo", fs: denoFs })
@@ -182,7 +168,7 @@ it('should be able to track renames via Visual Studio Code', async () => {
 
     await Deno.writeFile(file0, data0)
 
-    // Deno.rename() behavior
+    // cf: https://github.com/microsoft/vscode/blob/94c9ea46838a9a619aeafb7e8afd1170c967bb55/src/vs/workbench/contrib/files/common/explorerModel.ts#L158-L167
     setTimeout(async () => {
         await Deno.remove(file0).then(async _ => {
             setTimeout(async () => {
@@ -206,4 +192,42 @@ it('should be able to track renames via Visual Studio Code', async () => {
     expect(occuredEvents[1].entry.name).toBe('A.txt')
     expect(occuredEvents[2].kind).toBe('create')
     expect(occuredEvents[2].entry.name).toBe('B.txt')
+})
+
+it('should be able to track folder renames', async () => {
+    const tempDirName = join(Deno.cwd(), "/foo/bar/")
+    await Deno.mkdir(tempDirName, { recursive: true })
+    const watcher = watchFs({ source: "./foo", fs: denoFs })
+
+    // Make sure to put a highly enough value to make sure FS ops can be done before
+    // the watcher is terminated. Otherwise async ops may leak.
+    // Remember that Deno kills any test process even if some promise is still pending.
+    setTimeout(() => { (watcher as any).return(); }, 2600)
+
+    const file0 = join(tempDirName, "/A.txt")
+    const file1 = join(tempDirName, "/B.txt")
+    const encoder = new TextEncoder();
+    const data0 = encoder.encode("Hello world\n");
+
+    await Deno.writeFile(file0, data0)
+    await Deno.writeFile(file1, data0)
+
+    // Deno.rename() behavior
+    setTimeout(async () => {
+        await Deno.rename(tempDirName, join(Deno.cwd(), "/foo/doe/"))
+    }, 240)
+
+    // Launch the watcher and record events
+    const occuredEvents = []
+    for await (const event of watcher) {
+        occuredEvents.push(event)
+    }
+
+    // Clean up the temp dir
+    await Deno.remove(join(Deno.cwd(), "/foo/"), { recursive: true })
+
+    expect(occuredEvents.length).toBe(5)
+    expect(occuredEvents.filter(el => el.kind === 'watch').length).toBe(1)
+    expect(occuredEvents.filter(el => el.kind === 'create').length).toBe(2)
+    expect(occuredEvents.filter(el => el.kind === 'remove').length).toBe(2)
 })
