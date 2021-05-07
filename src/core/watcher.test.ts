@@ -213,7 +213,7 @@ it('should be able to track file renames via Visual Studio Code', async () => {
     // Trying to monitor FSEvents...
     if (Deno.build.os === 'darwin') {
         console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
-        expect(occuredEvents.length).toBe(3)
+        expect(occuredEvents.length).toBe(4)
         expect(occuredEvents[0].kind).toBe('watch')
         expect(occuredEvents[1].kind).toBe('modify')
         expect(occuredEvents[1].entry.name).toBe('A.txt')
