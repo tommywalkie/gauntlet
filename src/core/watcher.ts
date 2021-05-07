@@ -47,10 +47,20 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                 )
                 if (isMac) {
                     console.log(event.kind, path)
-                    //console.log(entry)
                     const physicallyExists = options.fs.existsSync(normalize(path))
-                    if (entry && physicallyExists) event.kind = 'modify'
-                    if (!physicallyExists) event.kind = 'remove'
+                    switch (event.kind) {
+                        case 'create':
+                            if (entry && physicallyExists) event.kind = 'modify'
+                            if (!physicallyExists) event.kind = 'remove'
+                            break;
+
+                        case 'modify':
+                            if (!physicallyExists) event.kind = 'create'
+                            break;
+                    
+                        default:
+                            break;
+                    }
                 }
                 if (event.kind === 'create') {
                     try {
