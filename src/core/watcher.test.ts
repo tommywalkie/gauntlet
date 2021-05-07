@@ -60,6 +60,11 @@ it('should be able to track newly added files', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
+    // Trying to monitor FSEvents...
+    if (Deno.build.os === 'darwin') {
+        console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
+    }
+
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
     expect(occuredEvents[1].kind).toBe('create')
@@ -104,6 +109,11 @@ it('should be able to track file saves', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
+    // Trying to monitor FSEvents...
+    if (Deno.build.os === 'darwin') {
+        console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
+    }
+
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
     expect(occuredEvents[1].kind).toBe('modify')
@@ -142,6 +152,11 @@ it('should be able to track file renames via Deno.rename()', async () => {
 
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
+
+    // Trying to monitor FSEvents...
+    if (Deno.build.os === 'darwin') {
+        console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
+    }
 
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
@@ -186,6 +201,11 @@ it('should be able to track file renames via Visual Studio Code', async () => {
     // Clean up the temp dir
     await Deno.remove(tempDirName, { recursive: true })
 
+    // Trying to monitor FSEvents...
+    if (Deno.build.os === 'darwin') {
+        console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
+    }
+
     expect(occuredEvents.length).toBe(3)
     expect(occuredEvents[0].kind).toBe('watch')
     expect(occuredEvents[1].kind).toBe('remove')
@@ -225,6 +245,11 @@ it('should be able to track folder renames', async () => {
 
     // Clean up the temp dir
     await Deno.remove(join(Deno.cwd(), "/foo/"), { recursive: true })
+
+    // Trying to monitor FSEvents...
+    if (Deno.build.os === 'darwin') {
+        console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
+    }
 
     expect(occuredEvents.length).toBe(5)
     expect(occuredEvents.filter(el => el.kind === 'watch').length).toBe(1)
