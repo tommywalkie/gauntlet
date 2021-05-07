@@ -59,11 +59,11 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                             }
                             else if (isDirectory) {
                                 // Just in case folder file events happen before the one for the folder
-                                setTimeout(async() => await refreshSource(), 1200)
+                                setTimeout(async() => await refreshSource(), 800)
                             }
                         }
                     ).catch(async () => {
-                        setTimeout(async() => await refreshSource(), 1200)
+                        setTimeout(async() => await refreshSource(), 800)
                     })
                 }
                 if (event.kind === 'remove' || event.kind === 'modify') {
@@ -89,7 +89,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                             // to make sure about it.
                             if (await options.fs.exists(normalize(entry.path)))
                                 events.push({ _id: randomId(), kind: event.kind, entry })
-                            else setTimeout(async() => await refreshSource(), 1200)
+                            else setTimeout(async() => await refreshSource(), 800)
                         }
                     }
                     if (entry?.isDirectory) {
