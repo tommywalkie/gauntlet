@@ -44,3 +44,17 @@ export function toTypedArray(s: string): Uint8Array {
     });
     return ua;
 }
+
+export function getOS() {
+    if (globalThis.Deno != null) {
+        return Deno.build.os;
+    }
+    const navigator = (globalThis as any).navigator
+    if (navigator?.appVersion?.includes?.("Win") ?? false) {
+        return "windows"
+    }
+    if (navigator?.appVersion?.includes?.("Mac") ?? false) {
+        return "darwin"
+    }
+    return "linux"
+}
