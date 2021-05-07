@@ -23,12 +23,12 @@ Gauntlet is a _work-in-progress_ naive and fast ES Modules powered frontend tool
 
 ## Goals
 
-- 💎 **Power** — _Very_ fast
-- 💎 **Space** — Browser-compatible at the core, modularized codebase (no `deps.ts`)
-- 💎 **Time** — Discoverable, backed by XState statecharts (**_planned!_**)
-- 💎 **Mind** — Subscribable, log and watch for _any_ event the way _you_ want
-- 💎 **Soul** — Supports Snowpack plugins (**_planned!_**)
-- 💎 **Reality** — Supports TypeScript and JSX via ESBuild
+- <img src="https://www.thecolorapi.com/id?hex=993366&format=svg&named=false&w=12&h=12"> _Very_ fast
+- <img src="https://www.thecolorapi.com/id?hex=00CCFF&format=svg&named=false&w=12&h=12"> Browser-compatible at the core, modularized codebase (no `deps.ts`)
+- <img src="https://www.thecolorapi.com/id?hex=339966&format=svg&named=false&w=12&h=12"> Discoverable
+- <img src="https://www.thecolorapi.com/id?hex=FFFF00&format=svg&named=false&w=12&h=12"> Subscribable, log and watch for _any_ event the way _you_ want
+- <img src="https://www.thecolorapi.com/id?hex=FF9900&format=svg&named=false&w=12&h=12"> Supports Snowpack plugins (**_planned!_**)
+- <img src="https://www.thecolorapi.com/id?hex=FF0000&format=svg&named=false&w=12&h=12"> Supports TypeScript and JSX via ESBuild
 
 ## Contributing
 
@@ -56,7 +56,7 @@ git clone https://github.com/tommywalkie/gauntlet
 
 **Note**: No need to install ESBuild yourself, this is done automatically by the official Deno module itself, or retrieved via network if using the WebAssembly version.
 
-##### Usage
+#### Usage
 
 Install the `cli.ts` script as a command-line tool via Deno.
 
@@ -72,7 +72,7 @@ gauntlet --help   # Open the help guide
 gauntlet dev      # Run the development server
 ```
 
-##### Testing
+#### Testing
 
 Launch tests with the following Deno command.
 
