@@ -1,11 +1,11 @@
-import { isWindows } from '../../imports/std.ts'
 import { AsyncPushIterator } from '../../imports/graphqlade.ts'
 import { join, normalize } from '../../imports/path.ts'
-import { toArray, randomId } from './utils.ts'
+import { getOS, toArray, randomId } from './utils.ts'
 import type { FsEvent, WalkEntry } from './fs.ts'
 import type { WatchEvent, WatcherOptions } from './types.ts'
 
 export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEvent> {
+    const isMac = getOS() === 'darwin'
     return new AsyncPushIterator<WatchEvent>((iterator) => {
         let events: Array<WatchEvent & { _id: string }> = []
         const watcher = options.fs.watch(join(options.fs.cwd(), options.source))
@@ -40,6 +40,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
         }
     
         async function handleEvent(event: FsEvent) {
+            if (isMac) console.log(event)
             if (event.paths.length === 1) {
                 const path = event.paths[0]
                 if (event.kind === 'create') {
@@ -69,6 +70,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                     const entry = contents.find(
                         content => content.path === join(options.source, format(path))
                     )
+                    if (isMac) console.log(entry)
                     if (entry?.isFile) {
                         if (event.kind === 'remove') {
                             contents = contents.filter(
