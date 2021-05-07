@@ -45,23 +45,20 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                 const entry = contents.find(
                     content => content.path === join(options.source, format(path))
                 )
+
+                // FSevents (MacOS) event translating attempts
                 if (isMac) {
-                    console.log(event.kind, path)
                     const physicallyExists = options.fs.existsSync(normalize(path))
                     switch (event.kind) {
                         case 'create':
+                            // File saves on MacOS emit 'create' for whatever reason
                             if (entry && physicallyExists) event.kind = 'modify'
-                            if (!physicallyExists) event.kind = 'remove'
                             break;
-
-                        case 'modify':
-                            if (!physicallyExists) event.kind = 'create'
-                            break;
-                    
                         default:
                             break;
                     }
                 }
+                
                 if (event.kind === 'create') {
                     try {
                         const { isFile, isDirectory, isSymlink } = options.fs.lstatSync(path)
@@ -72,7 +69,6 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                             isDirectory,
                             isSymlink
                         }
-                        if (isMac) console.log({entry})
                         if (isFile) {
                             contents.push(entry)
                             events.push({ _id: randomId(), kind: event.kind as any, entry })
@@ -93,7 +89,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                         //
                         // This means we need to track if the said file
                         // which fired a 'modify' event actually exists.
-                        // If not, this is probably a move/rename, so we refresh the source
+                        // If not, then this is probably a move/rename, so we refresh the source
                         // to make sure about it.
                         if (options.fs.existsSync(normalize(entry.path))) {
                             events.push({ _id: randomId(), kind: event.kind, entry })
@@ -119,11 +115,6 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                         events.push({ _id: randomId(), kind: event.kind, entry })
                     }
                     if (entry?.isDirectory) {
-                        // When renaming folders, at least on Windows, 3 'modify' events may fire:
-                        // - One for the OLD NAMED folder
-                        // - One for the NEWLY NAMED folder
-                        // - One for the PARENT folder
-                        // This is a workaround in order to de-duplicate events
                         refreshSource()
                     }
                 }
