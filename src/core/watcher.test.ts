@@ -90,15 +90,10 @@ it('should be able to track file saves', async () => {
     const data1 = encoder.encode("Foo\n");
     const data2 = encoder.encode("Bar\n");
 
-    await Deno.writeFile(file0, data0)
+    Deno.writeFileSync(file0, data0)
 
-    setTimeout(async () => {
-        await Deno.writeFile(file0, data1)
-    }, 120)
-
-    setTimeout(async () => {
-        await Deno.writeFile(file0, data2)
-    }, 520)
+    setTimeout(() => Deno.writeFileSync(file0, data1), 120)
+    setTimeout(() => Deno.writeFileSync(file0, data2), 520)
 
     // Launch the watcher and record events
     const occuredEvents = []
