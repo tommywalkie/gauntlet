@@ -46,8 +46,8 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                     content => content.path === join(options.source, format(path))
                 )
                 if (isMac) {
-                    console.log(event)
-                    console.log(entry)
+                    //console.log(event)
+                    //console.log(entry)
                     const physicallyExists = options.fs.existsSync(normalize(path))
                     if (entry && physicallyExists) event.kind = 'modify'
                     if (!physicallyExists) event.kind = 'remove'
@@ -150,16 +150,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
     
         (async () => {
             contents = toArraySync<WalkEntry>(srcIterator)
-            
-            // This is meant to de-duplicate ReadDirectoryChangesW events
-            const cache: Map<string, number> = new Map()
-            async function updateCache(event: FsEvent) {
-                cache.set(event.paths.toString(), Date.now() + 20)
-                await handleEvent(event)
-            }
-
             await notifyStart()
-
             for await (const event of watcher) {
                 await handleEvent(event)
             }
