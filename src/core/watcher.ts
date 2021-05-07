@@ -46,17 +46,10 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                     content => content.path === join(options.source, format(path))
                 )
 
-                // FSevents (MacOS) event translating attempts
                 if (isMac) {
                     const physicallyExists = options.fs.existsSync(normalize(path))
-                    switch (event.kind) {
-                        case 'create':
-                            // File saves on MacOS emit 'create' for whatever reason
-                            if (entry && physicallyExists) event.kind = 'modify'
-                            break;
-                        default:
-                            break;
-                    }
+                    // File saves on MacOS emit 'create' events for whatever reason
+                    if (event.kind === 'create' && entry && physicallyExists) event.kind = 'modify'
                 }
                 
                 if (event.kind === 'create') {

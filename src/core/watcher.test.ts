@@ -107,7 +107,7 @@ it('should be able to track file renames via Deno.rename()', async () => {
             Deno.renameSync(join(tempDirName, "/A.txt"), join(tempDirName, "/B.txt"));
         }
     }
-    if (Deno.build.os === 'darwin') console.log(occuredEvents)
+    
     expect(occuredEvents[0].kind).toBe('watch')
     expect(occuredEvents.filter(el => el.kind === 'create').length).toBe(2)
     expect(occuredEvents.filter(el => el.kind === 'remove').length).toBe(1)
