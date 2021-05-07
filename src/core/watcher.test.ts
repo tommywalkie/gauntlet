@@ -4,7 +4,7 @@ import { denoFs } from '../fs.ts'
 import { watchFs } from './watcher.ts'
 import { join } from '../../imports/path.ts'
 
-const DELAY = Deno.build.os === 'darwin' ? 5000 : 2500
+const DELAY = 2500
 
 it('should be able to run and pause a Deno.watchFs watcher', async () => {
     const watcher = Deno.watchFs("./");

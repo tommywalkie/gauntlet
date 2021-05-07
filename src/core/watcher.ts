@@ -46,7 +46,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                     content => content.path === join(options.source, format(path))
                 )
                 if (isMac) {
-                    //console.log(event)
+                    console.log(event.kind, path)
                     //console.log(entry)
                     const physicallyExists = options.fs.existsSync(normalize(path))
                     if (entry && physicallyExists) event.kind = 'modify'
@@ -62,15 +62,17 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                             isDirectory,
                             isSymlink
                         }
+                        if (isMac) console.log({entry})
                         if (isFile) {
                             contents.push(entry)
                             events.push({ _id: randomId(), kind: event.kind as any, entry })
                         }
                         else if (isDirectory) {
-                            // Just in case folder file events happen before the one for the folder
                             refreshSource()
                         }
-                    } catch(e) {}
+                    } catch(e) {
+                        refreshSource()
+                    }
                 }
                 if (event.kind === 'modify') {
                     if (entry?.isFile) {
