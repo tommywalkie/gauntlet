@@ -44,12 +44,14 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
             if (event.paths.length === 1) {
                 const path = event.paths[0]
                 const entry = contents.find(
-                    content => content.path === join(options.source, format(path))
+                    content => {
+                        if (isMac) console.log(content.path, join(options.source, format(path)))
+                        return content.path === join(options.source, format(path))
+                    }
                 )
                 if (isMac) {
                     const physicallyExists = await options.fs.exists(normalize(path))
-                    console.log({ expected: path, hasEntry: entry ? true : false, exists: physicallyExists })
-                    if (entry) event.kind = 'modify'
+                    if (entry && physicallyExists) event.kind = 'modify'
                     if (!physicallyExists) event.kind = 'remove'
                 }
                 if (event.kind === 'create') {

@@ -156,14 +156,23 @@ it('should be able to track file renames via Deno.rename()', async () => {
     // Trying to monitor FSEvents...
     if (Deno.build.os === 'darwin') {
         console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
+        expect(occuredEvents.length).toBe(4)
+        expect(occuredEvents[0].kind).toBe('watch')
+        expect(occuredEvents[1].kind).toBe('modify')
+        expect(occuredEvents[1].entry.name).toBe('A.txt')
+        expect(occuredEvents[2].kind).toBe('remove')
+        expect(occuredEvents[2].entry.name).toBe('A.txt')
+        expect(occuredEvents[3].kind).toBe('create')
+        expect(occuredEvents[3].entry.name).toBe('B.txt')
     }
-
-    expect(occuredEvents.length).toBe(3)
-    expect(occuredEvents[0].kind).toBe('watch')
-    expect(occuredEvents[1].kind).toBe('remove')
-    expect(occuredEvents[1].entry.name).toBe('A.txt')
-    expect(occuredEvents[2].kind).toBe('create')
-    expect(occuredEvents[2].entry.name).toBe('B.txt')
+    else {
+        expect(occuredEvents.length).toBe(3)
+        expect(occuredEvents[0].kind).toBe('watch')
+        expect(occuredEvents[1].kind).toBe('remove')
+        expect(occuredEvents[1].entry.name).toBe('A.txt')
+        expect(occuredEvents[2].kind).toBe('create')
+        expect(occuredEvents[2].entry.name).toBe('B.txt')
+    }
 })
 
 it('should be able to track file renames via Visual Studio Code', async () => {
@@ -204,14 +213,23 @@ it('should be able to track file renames via Visual Studio Code', async () => {
     // Trying to monitor FSEvents...
     if (Deno.build.os === 'darwin') {
         console.log(occuredEvents.map(el => { return { kind: el.kind, path: el.entry.path } }))
+        expect(occuredEvents.length).toBe(3)
+        expect(occuredEvents[0].kind).toBe('watch')
+        expect(occuredEvents[1].kind).toBe('modify')
+        expect(occuredEvents[1].entry.name).toBe('A.txt')
+        expect(occuredEvents[2].kind).toBe('remove')
+        expect(occuredEvents[2].entry.name).toBe('A.txt')
+        expect(occuredEvents[3].kind).toBe('create')
+        expect(occuredEvents[3].entry.name).toBe('B.txt')
     }
-
-    expect(occuredEvents.length).toBe(3)
-    expect(occuredEvents[0].kind).toBe('watch')
-    expect(occuredEvents[1].kind).toBe('remove')
-    expect(occuredEvents[1].entry.name).toBe('A.txt')
-    expect(occuredEvents[2].kind).toBe('create')
-    expect(occuredEvents[2].entry.name).toBe('B.txt')
+    else {
+        expect(occuredEvents.length).toBe(3)
+        expect(occuredEvents[0].kind).toBe('watch')
+        expect(occuredEvents[1].kind).toBe('remove')
+        expect(occuredEvents[1].entry.name).toBe('A.txt')
+        expect(occuredEvents[2].kind).toBe('create')
+        expect(occuredEvents[2].entry.name).toBe('B.txt')
+    }
 })
 
 it('should be able to track folder renames', async () => {
