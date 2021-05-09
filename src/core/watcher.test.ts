@@ -3,7 +3,7 @@ import { denoFs } from '../fs.ts'
 import { watchFs } from './watcher.ts'
 import { join } from '../../imports/path.ts'
 
-const DELAY = 2500
+const DELAY = 4000
 
 it('should be able to run and pause a watcher', async () => {
     const watcher = watchFs({ source: './', fs: denoFs });
