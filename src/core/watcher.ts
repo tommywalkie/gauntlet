@@ -24,7 +24,6 @@ function diff(a: WalkEntry[], b: WalkEntry[]) {
 }
 
 export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
-    const isMac = getOS() === 'darwin'
     return new FileWatcher<WatchEvent>((iterator) => {
         let events: Array<WatchEvent & { _id: string }> = []
         const watcher = options.fs.watch(join(options.fs.cwd(), options.source))
@@ -37,7 +36,7 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
 
         function refreshSource() {
             const snapshot = [...new Set([...contents])]
-            const srcIterator = options.fs.walkSync(options.source)
+            const srcIterator = options.fs.walkSync(normalize(options.source))
             const entries = toArraySync<WalkEntry>(srcIterator)
             contents = [...new Set([...entries])]
             const addedEntries = diff(entries, snapshot)

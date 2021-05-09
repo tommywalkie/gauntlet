@@ -130,6 +130,7 @@ it('should be able to track file renames via Visual Studio Code', async () => {
     Deno.removeSync(tempDirName, { recursive: true })
 })
 
+/*
 it('should be able to track non-empty folder deletions', async () => {
     const tempDirName = join(Deno.cwd(), "/foo")
     try { Deno.removeSync(tempDirName, { recursive: true }) } catch(e) {}
@@ -197,3 +198,4 @@ it('should be able to track non-empty folder renames', async () => {
 
     Deno.removeSync(tempDirName, { recursive: true })
 })
+*/
