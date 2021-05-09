@@ -150,7 +150,7 @@ export const fs: FileSystemLike = {
 
 - When renaming/removing a non-empty folder, this may emit event(s) only for the folder itself, which can be quite inconvenient while our primary use case is watching and processing _supposedly_ existing files, again implying needlessly walking the filesystem
 
-The current file watcher implementation is designed for consistent behaviors among operating systems with four possible events (`watch`, `create`, `remove` and `modify`), and to be used the same way as `Deno.watchFs`, thus by returning an async iterator.
+The current file watcher implementation strives to output consistent behaviors among operating systems with four possible events (`watch`, `create`, `remove` and `modify`), and to be used the same way as `Deno.watchFs`, thus by returning an async iterator.
 
 ```typescript
 import { watchFs } from 'https://deno.land/x/gauntlet/src/core/watcher.ts'
@@ -171,7 +171,7 @@ The behavior of the file watcher is as it follows:
 - Emits a `remove` event for every file inside a folder being removed
 - Emits a `remove` event and then a `create` event for every file inside a folder being renamed
 
-This approach is certainly not perfect, an obvious limitation is that the compiler or any user may need to cache file contents to avoid re-processing unchanged renamed files. That said, file watchers are carefully tested via multi-platform continuous integration, but feel free to suggest changes via Github Issues or pull requests.
+This approach is certainly not perfect, an obvious limitation is that the compiler or any user may need to cache file contents to avoid re-processing unchanged renamed files. That said, file watchers are tested via multi-platform continuous integration, but feel free to suggest changes via Github Issues or pull requests.
 
 #### Compiler
 
