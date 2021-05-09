@@ -60,10 +60,12 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
                 const entry = contents.find(
                     content => content.path === join(options.source, format(path))
                 )
-
-                const physicallyExists = options.fs.existsSync(normalize(path))
-                // File saves on MacOS emit 'create' events for whatever reason
-                if (event.kind === 'create' && entry && physicallyExists) event.kind = 'modify'
+                
+                if (isMac) {
+                    const physicallyExists = options.fs.existsSync(normalize(path))
+                    // File saves on MacOS emit 'create' events for whatever reason
+                    if (event.kind === 'create' && entry && physicallyExists) event.kind = 'modify'
+                }
                 
                 if (event.kind === 'create') {
                     try {
@@ -120,9 +122,6 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
                         handledIds.push(event._id) && iterator.push(event)
                     }
                 }
-            }
-            else {
-                handledIds.splice(0, handledIds.length)
             }
         }, 200);
 
