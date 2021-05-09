@@ -137,7 +137,7 @@ it('should be able to track non-empty folder deletions', async () => {
     const watcher = watchFs({ source: "./foo", fs: denoFs })
     const occuredEvents = []
 
-    setTimeout(() => (watcher as any).return(), DELAY + 1000)
+    setTimeout(() => (watcher as any).return(), DELAY)
 
     for await (const event of watcher) {
         occuredEvents.push(event)
@@ -170,7 +170,7 @@ it('should be able to track non-empty folder renames', async () => {
     const watcher = watchFs({ source: "./foo", fs: denoFs })
     const occuredEvents = []
 
-    setTimeout(() => (watcher as any).return(), DELAY + 1000)
+    setTimeout(() => (watcher as any).return(), DELAY)
 
     for await (const event of watcher) {
         occuredEvents.push(event)
