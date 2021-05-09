@@ -19,8 +19,10 @@ export class FileWatcher<T> extends AsyncPushIterator<T> {
     }
 }
 
+const isMac = getOS() === 'darwin'
+const isLinux = getOS() === 'linux'
+
 export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEvent> {
-    const isMac = getOS() === 'darwin'
     return new FileWatcher<WatchEvent>((iterator) => {
         let events: Array<WatchEvent & { _id: string }> = []
         const watcher = options.fs.watch(join(options.fs.cwd(), options.source))
