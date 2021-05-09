@@ -132,14 +132,13 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
         }, 200);
 
         async function notifyStart() {
-            const { isFile, isDirectory, isSymlink } = options.fs.lstatSync(options.source)
             events.push({
                 _id: randomId(),
                 kind: "watch",
                 entry: {
                     path: normalize(options.source),
                     name: normalize(options.source),
-                    isFile, isDirectory, isSymlink
+                    isFile: false, isDirectory: true, isSymlink: false
                 }
             })
         }
