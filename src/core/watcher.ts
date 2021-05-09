@@ -1,29 +1,12 @@
-import { AsyncPushIterator, AsyncPushIteratorSetup } from '../../imports/graphqlade.ts'
+import { AsyncPushIterator } from '../../imports/graphqlade.ts'
 import { join, normalize } from '../../imports/path.ts'
 import { getOS, toArraySync, randomId } from './utils.ts'
-import type { FileSystemLike, FsEvent, WalkEntry } from './fs.ts'
+import type { FsEvent, WalkEntry } from './fs.ts'
 import type { WatchEvent, WatcherOptions } from './types.ts'
 
-/**
- * Based on an `AsyncIterator` superset originally designed
- * for [`graphqlade`](https://github.com/morris/graphqlade), the file watcher is intended
- * to wrap asynchronously pushed events by the provided filesystem `<FileSystemLike>.watch`
- * while .
- */
-export class FileWatcher<T> extends AsyncPushIterator<T> {
-    fs: FileSystemLike
-
-    constructor(setup: AsyncPushIteratorSetup<T>, fs: FileSystemLike) {
-        super(setup)
-        this.fs = fs
-    }
-}
-
-const isMac = getOS() === 'darwin'
-const isLinux = getOS() === 'linux'
-
 export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEvent> {
-    return new FileWatcher<WatchEvent>((iterator) => {
+    const isMac = getOS() === 'darwin'
+    return new AsyncPushIterator<WatchEvent>((iterator) => {
         let events: Array<WatchEvent & { _id: string }> = []
         const watcher = options.fs.watch(join(options.fs.cwd(), options.source))
         const srcIterator: IterableIterator<WalkEntry> = options.fs.walkSync(options.source)
@@ -92,6 +75,15 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                 }
                 if (event.kind === 'modify') {
                     if (entry?.isFile) {
+                        // A file rename can happen in two ways:
+                        // - A direct metadata change (Deno.rename())
+                        // - A removal/creation of a file (like VS Code, see:
+                        // https://github.com/microsoft/vscode/blob/94c9ea46838a9a619aeafb7e8afd1170c967bb55/src/vs/workbench/contrib/files/common/explorerModel.ts#L158-L167)
+                        //
+                        // This means we need to track if the said file
+                        // which fired a 'modify' event actually exists.
+                        // If not, then this is probably a move/rename, so we refresh the source
+                        // to make sure about it.
                         if (options.fs.existsSync(normalize(entry.path))) {
                             events.push({ _id: randomId(), kind: event.kind, entry })
                         }
@@ -100,6 +92,11 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                         }
                     }
                     if (entry?.isDirectory) {
+                        // When renaming folders, at least on Windows, 3 'modify' events may fire:
+                        // - One for the OLD NAMED folder
+                        // - One for the NEWLY NAMED folder
+                        // - One for the PARENT folder
+                        // This is a workaround in order to de-duplicate events
                         refreshSource()
                     }
                 }
@@ -157,7 +154,9 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
     
         return () => {
             clearInterval(intervalId);
+            // Both the hereby watcher and the wrapped file watcher (options.fs.watch)
+            // shall be terminated. Otherwise, async ops may leak and Deno test will fail.
             (watcher as any).return();
         };
-    }, options.fs)
+    })
 }
