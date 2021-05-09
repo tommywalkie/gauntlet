@@ -23,77 +23,18 @@ Gauntlet is a _work-in-progress_ naive and fast ES Modules powered frontend tool
 
 ## Goals
 
-- <img src="https://www.thecolorapi.com/id?hex=993366&format=svg&named=false&w=12&h=12"> _Very_ fast
-- <img src="https://www.thecolorapi.com/id?hex=00CCFF&format=svg&named=false&w=12&h=12"> Browser-compatible at the core, modularized codebase (no `deps.ts`)
-- <img src="https://www.thecolorapi.com/id?hex=339966&format=svg&named=false&w=12&h=12"> Discoverable
-- <img src="https://www.thecolorapi.com/id?hex=FFFF00&format=svg&named=false&w=12&h=12"> Subscribable, log and watch for _any_ event the way _you_ want
-- <img src="https://www.thecolorapi.com/id?hex=FF9900&format=svg&named=false&w=12&h=12"> Supports Snowpack plugins (**_planned!_**)
-- <img src="https://www.thecolorapi.com/id?hex=FF0000&format=svg&named=false&w=12&h=12"> Supports TypeScript and JSX via ESBuild
+-  <img src="https://www.thecolorapi.com/id?hex=993366&format=svg&named=false&w=12&h=12">  _Very_ fast
+-  <img src="https://www.thecolorapi.com/id?hex=00CCFF&format=svg&named=false&w=12&h=12">  Browser-compatible at the core, modularized codebase (no `deps.ts`)
+-  <img src="https://www.thecolorapi.com/id?hex=339966&format=svg&named=false&w=12&h=12">  Discoverable
+-  <img src="https://www.thecolorapi.com/id?hex=FFFF00&format=svg&named=false&w=12&h=12">  Subscribable, log and watch for _any_ event the way _you_ want
+-  <img src="https://www.thecolorapi.com/id?hex=FF9900&format=svg&named=false&w=12&h=12">  Supports Snowpack plugins (**_planned!_**)
+-  <img src="https://www.thecolorapi.com/id?hex=FF0000&format=svg&named=false&w=12&h=12">  Supports TypeScript and JSX via ESBuild
 
 ## Contributing
 
-#### Submitting a Pull Request
+Please follow the available [contributing guide](https://github.com/tommywalkie/gauntlet/blob/main/CONTRIBUTING.md), including most instructions for building from source, testing, the project structure and the planned features.
 
-Here is a couple of rules of thumb for any submitted pull request:
-
-- Please be respectful and mindful of your language
-- Please use english language for any comment through Github or the source code
-- Fork the hereby repo and follow the [Github flow](https://guides.github.com/introduction/flow/)
-- Give the PR a descriptive title
-
-#### Building from source
-
-Clone the hereby repo or, if intending to submit a PR, your own fork.
-
-```shell
-git clone https://github.com/tommywalkie/gauntlet
-```
-
-##### Prerequisites
-
-- Deno 1.8+
-- Deno Visual Studio Code extension
-
-**Note**: No need to install ESBuild yourself, this is done automatically by the official Deno module itself, or retrieved via network if using the WebAssembly version.
-
-#### Usage
-
-Install the `cli.ts` script as a command-line tool via Deno.
-
-```shell
-deno install -A --unstable --no-check <your-repo>/cli.ts
-# ✅ Successfully installed gauntlet
-```
-
-Now you can run the actual program.
-
-```shell
-gauntlet --help   # Open the help guide
-gauntlet dev      # Run the development server
-```
-
-#### Testing
-
-Launch tests with the following Deno command.
-
-**Note**: We need both `-A` and `--unstable` flags in order to launch file watching and build pipeline related tests.
-
-```shell
-deno test -A --unstable
-```
-
-#### Style guide
-
-Contributing section is still _work-in-progress_, but here is the basic idea:
-
-- All the platform-agnostic source code shall reside in `src/core/`
-- [Similarly to Meteor projects](https://guide.meteor.com/structure.html#javascript-structure), individual dependencies shall be settled under `imports/`
-- Gauntlet is intended to be built upon, please don't bring any bare import mechanism
-- Avoid cyclic imports
-- Prefer JS/TS/native dependencies over WebAssembly ones unless necessary (_e.g._ ESBuild for the browser)
-- Prefer modularized dependencies over heavy centralized ones using, _inter alia_, the [`deps.ts` convention](https://deno.land/manual/examples/manage_dependencies) (*i.e.* please don't make accustomed Lodash users vendor the whole `deno.land/x`)
-- Most core features shall be event-driven, using the available type-safe `EventEmitter` implementation in `imports/deno_events.ts` which is based on [`deno_events`](https://deno.land/x/deno_events)
-- Test files (`**/*.test.ts`) use the available Jest-like matchers in `imports/expect.ts` which are based on [`expect`](https://deno.land/x/expect)
+The **v1.0.0** roadmap is available in [Github Projects](https://github.com/tommywalkie/gauntlet/projects/1).
 
 ## License
 

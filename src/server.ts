@@ -81,7 +81,7 @@ export async function runDevServer(options: DevServerOptions = {
         await Promise.all([...watchers, await gracefulExit(eventSource)])
     })
 
-    app.addEventListener("error", async (evt: ApplicationErrorEvent<any>) => {
+    app.addEventListener("error", async (evt: ApplicationErrorEvent<any, any>) => {
         eventSource.emit('error', 'Unexpected error encountered with Oak server')
         console.log(evt.error)
         esbuild.stop()

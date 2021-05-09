@@ -33,9 +33,8 @@ export interface WatcherOptions {
     fs: FileSystemLike
 }
 
-// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
 export interface FsEvent {
-    kind: "any" | "access" | "create" | "modify" | "remove";
+    kind: "create" | "modify" | "remove" | string;
     paths: string[];
 }
 
@@ -251,9 +250,11 @@ export interface SnowpackConfig {
  */
 export interface FileSystemLike {
     cwd: () => string
-    readFile: (path: string) => Promise<Uint8Array>
-    existsSync: (filePath: string) => boolean
+    existsSync: (path: string) => boolean
     lstatSync: (path: string) => Omit<Omit<WalkEntry, "name">, "path">
+    mkdirSync: (path: string | URL, ...options: any | undefined) => void
+    readFileSync: (path: string | URL) => Uint8Array
     walkSync: (currentPath: string) => IterableIterator<WalkEntry>
-    watch: (paths: string | string[], options?: { recursive: boolean }) => AsyncIterableIterator<FsEvent>
+    watch: (paths: string | string[], ...options: any | undefined) => AsyncIterableIterator<FsEvent>
+    writeFileSync: (path: string | URL, data: Uint8Array, ...options: any | undefined) => void
 }

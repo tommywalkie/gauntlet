@@ -1,16 +1,12 @@
+/**
+ * Naive unique ID generator
+ */
 export function randomId() {
     return Math.random().toString(36).substr(2, 9)
 }
 
 /**
- * Creates a sample promise
- */
-export function timeout(ms: number) {
-    return new Promise(resolve => setTimeout(() => resolve(true), ms));
-}
-
-/**
- * Takes an async interator and returns an array
+ * Takes an async iterator and returns an array
  */
 export async function toArray<T = any>(asyncIterator: AsyncIterableIterator<T>): Promise<Array<T>> { 
     const arr = []
@@ -19,7 +15,7 @@ export async function toArray<T = any>(asyncIterator: AsyncIterableIterator<T>):
 }
 
 /**
- * Takes an interator and returns an array
+ * Takes an iterator and returns an array
  */
  export function toArraySync<T = any>(it: IterableIterator<T>): Array<T> { 
     return [...it]

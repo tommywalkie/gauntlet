@@ -107,11 +107,26 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents> impleme
         return this.contents.get(path) as T;
     }
 
+    mkdirSync(path: string | URL) {
+        this.add(String(path))
+    }
+
     readFile(path: string) {
         const res = this.contents.get(normalize(path))
         if (res)
             return Promise.resolve(toTypedArray(String(res)))
         return Promise.reject(`File "${path}" not found.`)
+    }
+
+    readFileSync(path: string | URL) {
+        const res = this.contents.get(normalize(String(path)))
+        if (res) return toTypedArray(String(res))
+        throw new Error(`File "${path}" not found.`)
+    }
+
+    writeFileSync(path: string | URL, data: Uint8Array) {
+        const str = new TextDecoder().decode(data)
+        this.add(String(path), str as any)
     }
 
     exists(filePath: string) {
@@ -162,7 +177,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents> impleme
         return createAsyncIterable(this.getChildPaths(normalize(currentPath)))
     }
 
-    watch(paths: string | string[], options?: WatchOptions): AsyncPushIterator<FsEvent> {
+    watch(paths: string | string[], _options?: WatchOptions): AsyncPushIterator<FsEvent> {
         let events: Array<FsEvent & { _id: string }> = []
         return new AsyncPushIterator<FsEvent>((it) => {
             const intervalId = setInterval(() => {
@@ -262,7 +277,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents> impleme
  * plus `FileSystemLike` bindings including `lstat`, `walk`, `exists`, etc.
  */
 export function createVirtualFileSystem<T = any>(): VirtualFileSystem<T> {
-    return new VirtualFileSystem()
+    return new VirtualFileSystem<T>()
 }
 
 export type { FsEvent, FileEvents, FileSystemLike, WalkEntry }

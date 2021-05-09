@@ -1,27 +1,11 @@
 import { expect, it } from '../../imports/expect.ts'
-import { createVirtualFileSystem } from './fs.ts'
 import { denoFs } from '../fs.ts'
 import { watchFs } from './watcher.ts'
 import { join } from '../../imports/path.ts'
 
 const DELAY = 2500
 
-it('should be able to run and pause a Deno.watchFs watcher', async () => {
-    const watcher = Deno.watchFs("./");
-    setTimeout(() => { (watcher as any).return(); }, 300);
-    for await (const _ of watcher) {}
-    expect(true).toBeTruthy()
-})
-
-it('should be able to run and pause an AsyncPushIterator watcher', async () => {
-    const fs = createVirtualFileSystem()
-    const watcher = fs.watch("/");
-    setTimeout(() => { (watcher as any).return(); }, 300);
-    for await (const _ of watcher) {}
-    expect(true).toBeTruthy()
-})
-
-it('should be able to run and pause a Gauntlet watcher', async () => {
+it('should be able to run and pause a watcher', async () => {
     const watcher = watchFs({ source: './', fs: denoFs });
     setTimeout(() => (watcher as any).return(), 300);
     for await (const _ of watcher) {}
@@ -35,10 +19,8 @@ it('should be able to track newly added files', async () => {
     const watcher = watchFs({ source: "./foo", fs: denoFs })
     const occuredEvents: any[] = []
 
-    // @ts-ignore
-    setTimeout(() => watcher.return(), DELAY)
+    setTimeout(() => (watcher as any).return(), DELAY)
 
-    // Launch the watcher and record events
     for await (const event of watcher) {
         occuredEvents.push(event)
         if (event.kind === 'watch') {

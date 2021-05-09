@@ -1,12 +1,31 @@
-import { AsyncPushIterator } from '../../imports/graphqlade.ts'
+import { AsyncPushIterator, AsyncPushIteratorSetup } from '../../imports/graphqlade.ts'
 import { join, normalize } from '../../imports/path.ts'
 import { getOS, toArraySync, randomId } from './utils.ts'
-import type { FsEvent, WalkEntry } from './fs.ts'
+import type { FileSystemLike, FsEvent, WalkEntry } from './fs.ts'
 import type { WatchEvent, WatcherOptions } from './types.ts'
 
-export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEvent> {
+/**
+ * Based on an `AsyncIterator` superset originally designed
+ * for [`graphqlade`](https://github.com/morris/graphqlade), the file watcher is intended
+ * to wrap asynchronously pushed events by the provided filesystem `<FileSystemLike>.watch`
+ * while .
+ */
+export class FileWatcher<T> extends AsyncPushIterator<T> {
+    fs: FileSystemLike
+
+    constructor(setup: AsyncPushIteratorSetup<T>, fs: FileSystemLike) {
+        super(setup)
+        this.fs = fs
+    }
+}
+
+function diff(a: WalkEntry[], b: WalkEntry[]) {
+    return a.filter(item1 => !b.some(item2 => (item2.path === item1.path)))
+}
+
+export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
     const isMac = getOS() === 'darwin'
-    return new AsyncPushIterator<WatchEvent>((iterator) => {
+    return new FileWatcher<WatchEvent>((iterator) => {
         let events: Array<WatchEvent & { _id: string }> = []
         const watcher = options.fs.watch(join(options.fs.cwd(), options.source))
         const srcIterator: IterableIterator<WalkEntry> = options.fs.walkSync(options.source)
@@ -14,10 +33,6 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
 
         function format(str: string) {
             return normalize(str).substring(join(options.fs.cwd(), options.source).length + 1)
-        }
-    
-        function diff(a: WalkEntry[], b: WalkEntry[]) {
-            return a.filter(item1 => !b.some(item2 => (item2.path === item1.path)))
         }
 
         function refreshSource() {
@@ -46,11 +61,9 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                     content => content.path === join(options.source, format(path))
                 )
 
-                if (isMac) {
-                    const physicallyExists = options.fs.existsSync(normalize(path))
-                    // File saves on MacOS emit 'create' events for whatever reason
-                    if (event.kind === 'create' && entry && physicallyExists) event.kind = 'modify'
-                }
+                const physicallyExists = options.fs.existsSync(normalize(path))
+                // File saves on MacOS emit 'create' events for whatever reason
+                if (event.kind === 'create' && entry && physicallyExists) event.kind = 'modify'
                 
                 if (event.kind === 'create') {
                     try {
@@ -66,50 +79,27 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
                             contents.push(entry)
                             events.push({ _id: randomId(), kind: event.kind as any, entry })
                         }
-                        else if (isDirectory) {
-                            refreshSource()
-                        }
+                        else if (isDirectory) refreshSource()
                     } catch(e) {
                         refreshSource()
                     }
                 }
                 if (event.kind === 'modify') {
                     if (entry?.isFile) {
-                        // A file rename can happen in two ways:
-                        // - A direct metadata change (Deno.rename())
-                        // - A removal/creation of a file (like VS Code, see:
-                        // https://github.com/microsoft/vscode/blob/94c9ea46838a9a619aeafb7e8afd1170c967bb55/src/vs/workbench/contrib/files/common/explorerModel.ts#L158-L167)
-                        //
-                        // This means we need to track if the said file
-                        // which fired a 'modify' event actually exists.
-                        // If not, then this is probably a move/rename, so we refresh the source
-                        // to make sure about it.
-                        if (options.fs.existsSync(normalize(entry.path))) {
+                        if (options.fs.existsSync(normalize(entry.path)))
                             events.push({ _id: randomId(), kind: event.kind, entry })
-                        }
-                        else {
-                            refreshSource()
-                        }
+                        else refreshSource()
                     }
-                    if (entry?.isDirectory) {
-                        // When renaming folders, at least on Windows, 3 'modify' events may fire:
-                        // - One for the OLD NAMED folder
-                        // - One for the NEWLY NAMED folder
-                        // - One for the PARENT folder
-                        // This is a workaround in order to de-duplicate events
-                        refreshSource()
-                    }
+                    if (entry?.isDirectory) refreshSource()
                 }
                 if (event.kind === 'remove') {
                     if (entry?.isFile) {
                         contents = contents.filter(
-                            content => content.path !== join(options.source, format(path))
+                            item => item.path !== join(options.source, format(path))
                         )
                         events.push({ _id: randomId(), kind: event.kind, entry })
                     }
-                    if (entry?.isDirectory) {
-                        refreshSource()
-                    }
+                    if (entry?.isDirectory) refreshSource()
                 }
             }
         }
@@ -118,20 +108,25 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
         const intervalId = setInterval(() => {
             if (events.length > 0) {
                 const snapshot = [...events]
+                events = events.filter(el => !snapshot.map(el => el._id).includes(el._id))
                 const set = snapshot.filter(
-                    (e: WatchEvent, i) => events.findIndex(
+                    (e: WatchEvent, i) => snapshot.findIndex(
                         (a: WatchEvent) => a.kind === e.kind && a.entry.path === e.entry.path
                     ) === i
                 )
-                events = events.filter(el => !snapshot.map(el => el._id).includes(el._id))
                 for (let index = 0; index < set.length; index++) {
                     const event = set[index]
-                    if (!handledIds.includes(event._id)) handledIds.push(event._id) && iterator.push(event)
+                    if (!handledIds.includes(event._id)){
+                        handledIds.push(event._id) && iterator.push(event)
+                    }
                 }
+            }
+            else {
+                handledIds.splice(0, handledIds.length)
             }
         }, 200);
 
-        async function notifyStart() {
+        function notifyStart() {
             const { isFile, isDirectory, isSymlink } = options.fs.lstatSync(options.source)
             events.push({
                 _id: randomId(),
@@ -146,7 +141,7 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
     
         (async () => {
             contents = toArraySync<WalkEntry>(srcIterator)
-            await notifyStart()
+            notifyStart()
             for await (const event of watcher) {
                 await handleEvent(event)
             }
@@ -158,5 +153,5 @@ export function watchFs(options: WatcherOptions): AsyncIterableIterator<WatchEve
             // shall be terminated. Otherwise, async ops may leak and Deno test will fail.
             (watcher as any).return();
         };
-    })
+    }, options.fs)
 }
