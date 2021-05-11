@@ -10,7 +10,7 @@ import type {
 } from './types.ts'
 
 import { docopt, LICENSE, VERSION } from './docopt.ts'
-import { manifest } from '../../manifest.ts'
+import { manifest } from './manifest.ts'
 
 export const FLAG_PATTERN: RegExp = /^\-\-?(?<flag>[a-zA-Z]+)$/
 export const OPTION_PATTERN: RegExp = /^\-\-?(?<flag>[a-zA-Z]+)[\= ](?<value>[\w\\\/\:\.\,\@]+)$/

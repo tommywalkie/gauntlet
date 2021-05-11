@@ -1,5 +1,3 @@
-import type { DenoManifest } from '../../imports/deno_run.ts'
-
 export type SingleOrPair<T> = [T] | [T, T]
 
 export type Input = boolean | string | number
@@ -12,8 +10,20 @@ export interface Context {
 
 export type Callback<T = any> = (props: CallbackProps) => Promise<T>
 
+export interface Manifest {
+    name: string
+    version: string
+    description?: string
+    author?: string
+    license?: string
+    repository?: {
+        type: string,
+        url: string
+    }
+}
+
 export interface CallbackProps extends Omit<Context, "commands"> {
-    manifest: DenoManifest
+    manifest: Manifest
     options: Record<string, Input>
     values: Array<Input>
     [key: string]: any

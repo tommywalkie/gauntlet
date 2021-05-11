@@ -73,7 +73,8 @@ export async function runDevServer(options: DevServerOptions = {
     app.addEventListener("listen", async (evt: ApplicationListenEvent) => {
         eventSource.emit("listen", evt)
         const watchers = options.mounts.map(async (mount) => {
-            for await (const event of watchFs({ source: mount, fs: denoFs })) {
+            const watcher = watchFs({ source: mount, fs: denoFs })
+            for await (const event of watcher) {
                 eventSource.emit(event.kind, event.entry)
             }
         })

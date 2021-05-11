@@ -1,2 +1,7 @@
+/__TEST__
+/dist
+/node_modules
 /experimental
-/target
+pnpm-lock.yaml
+.pnpm-debug.log
+package-lock.json

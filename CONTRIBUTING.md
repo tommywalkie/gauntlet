@@ -136,18 +136,7 @@ export const fs: FileSystemLike = {
 
 `Deno.watchFs` uses Rust crate `notify` under the hood which is intended to provide cross-platform file watching support. Our current file watcher implementation is pre-processing `Deno.watchFs` results in order to solve various quirks:
 
-- Any `NotifyEvent` event processed by `Deno.watchFs` is [being stripped away](https://github.com/denoland/deno/blob/46b1c653c0c433932908b7610f60b409af134c76/runtime/ops/fs_events.rs#L66-L82) of some valuable information and will just output an event kind string and one or multiple paths, making it hard to guess _what_ actually happened without needlessly walking the filesystem 
-- A `modify` event can be either data or metadata change on Windows
-- A `create` event can also be a file save on OSX
-- When renaming entries, a single `modify` event specifying the old-named entry may be emitted, while Linux is currently the only system being granted with `modify` events describing two paths, _good luck to Windows & OSX users_
-
-```json
-{
-    kind: "modify",
-    paths: ["old_name.txt", "new_name.txt"]
-}
-```
-
+- Any `NotifyEvent` event processed by `Deno.watchFs` is [being stripped away](https://github.com/denoland/deno/blob/46b1c653c0c433932908b7610f60b409af134c76/runtime/ops/fs_events.rs#L66-L82) of some valuable information and will just output an event kind string and one or multiple paths, making it hard to guess _what_ actually happened without needlessly walking the filesystem
 - When renaming/removing a non-empty folder, this may emit event(s) only for the folder itself, which can be quite inconvenient while our primary use case is watching and processing _supposedly_ existing files, again implying needlessly walking the filesystem
 
 The current file watcher implementation strives to output consistent behaviors among operating systems with four possible events (`watch`, `create`, `remove` and `modify`), and to be used the same way as `Deno.watchFs`, thus by returning an async iterator.
@@ -161,7 +150,7 @@ for await (const event of watchFs({ source: "./src", fs })) {
 }
 ```
 
-The behavior of the file watcher is as it follows:
+The ideal behavior of the file watcher is as it follows:
 
 - Any event returns a filesystem entry (`WalkEntry`) defined by a path, an entry name, and some stats
 - Emits a `watch` event when the file watcher is ready
@@ -170,8 +159,6 @@ The behavior of the file watcher is as it follows:
 - Emits a `remove` event and then a `create` event for any renamed file
 - Emits a `remove` event for every file inside a folder being removed
 - Emits a `remove` event and then a `create` event for every file inside a folder being renamed
-
-This approach is certainly not perfect, an obvious limitation is that the compiler or any user may need to cache file contents to avoid re-processing unchanged renamed files. That said, file watchers are tested via multi-platform continuous integration, but feel free to suggest changes via Github Issues or pull requests.
 
 #### Compiler
 
@@ -212,76 +199,4 @@ it('should work', () => {
     expect(false).toBeFalsy()
 })
 ```
-
-### Testing file watching
-
-File watching is hands down the trickiest feature to test, first we need to make sure we understand the motivation behind the custom file watcher implementation and how iterators work, then we can talk about how to write proper tests in `src/core/watcher.test.ts`.
-
-When using `deno test`, we can notice that file watching related tests take some time (`~2.5s` per test), this is intentional for many reasons we'll attempt to list shortly.
-
-Given this sample test about tracking newly added files:
-
-```typescript
-import { expect, it } from '../../imports/expect.ts'
-import { join } from '../../imports/path.ts'
-import { denoFs } from '../fs.ts'
-import { watchFs } from './watcher.ts'
-
-it('should be able to track newly added files', async () => {
-    const tempDirName = join(Deno.cwd(), "/foo")
-    try { Deno.removeSync(tempDirName, { recursive: true }) } catch(e) {}
-    Deno.mkdirSync(tempDirName, { recursive: true })
-    
-    const watcher = watchFs({ source: "./foo", fs: denoFs })
-    setTimeout(() => (watcher as any).return(), 2500)
-
-    const occurredEvents: WatchEvent[] = []
-    for await (const event of watcher) {
-        occurredEvents.push(event)
-        if (event.kind === 'watch') {
-            Deno.writeTextFileSync(join(tempDirName, "/A.txt"), "Lorem ipsum")
-        }
-    }
-
-    expect(occurredEvents.length).toBe(3)
-    Deno.removeSync(tempDirName, { recursive: true })
-})
-```
-
-First we prepare the temporary folder `./foo` for the test and make sure it didn't exist in the first place, otherwise `mkdirSync` will throw an error, hence the preliminary `try/catch`.
-
-```typescript
-const tempDirName = join(Deno.cwd(), "/foo")
-try { Deno.removeSync(tempDirName, { recursive: true }) } catch(e) {}
-Deno.mkdirSync(tempDirName, { recursive: true })
-```
-
-Now we import the Deno-specific filesystem interface in `src/fs.ts` so we can use it in our tests, then we create an `AsyncIterableIterator` based file watcher using the filesystem interface we just imported, finally we set up a timeout to automatically call `<AsyncIterableIterator>.return()` and safely terminate the file watcher.
-
-```typescript
-const watcher = watchFs({ source: "./foo", fs: denoFs })
-setTimeout(() => (watcher as any).return(), 2500)
-```
-
-Then, we can launch the file watcher and record occurred events. The normal behavior of the file watcher is to emit a `watch` event to tell us it is ready.
-
-```typescript
-const occurredEvents: WatchEvent[] = []
-for await (const event of watcher) {
-    occurredEvents.push(event)
-    if (event.kind === 'watch') {
-        Deno.writeTextFileSync(join(tempDirName, "/A.txt"), "Some text")
-    }
-}
-```
-
-Once the watcher is terminated by the previously mentioned `setTimeout`, we can make our usual tests and then clear the temporary directory.
-
-Now, let's discuss about the guidelines and the common mistakes we can make during our tests:
-
-- Favor using synchronous APIs like `Deno.writeTextFileSync`
-- When renaming files using any third party tool like Visual Studio Code, we may mistakenly expect just a metadata change, while it may actually copy and then delete the old entry, hence why we should favor using shell commands or Deno filesystem APIs during our tests for consistency
-- Always assume we have no idea how many / what events will occur for whatever system (especially OSX), this is also why...
-- We **should not** use `<AsyncIterableIterator>.return()` inside the `for..await` unless we are absolutely sure about what we are doing. It is very tempting to do so in order to drastically speed up tests, but we may run into never-ending iteration if some _expected_ event didn't happen
-- Deno will warn us if some test function ended while there are remaining processing promises
 

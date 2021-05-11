@@ -1,0 +1,8 @@
+/__TEST__
+/.github
+/experimental
+/src
+/imports
+/**/*.ts
+/**/*.md
+pnpm-lock.yaml

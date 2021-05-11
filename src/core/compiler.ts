@@ -1,3 +1,7 @@
+export function compile() {
+    // TODO: Filesystem unaware compiler
+}
+
 export interface CompilerOptions {
     // TODO
 }

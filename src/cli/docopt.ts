@@ -1,11 +1,6 @@
-import type {
-    ProgramCommand,
-    ProgramFlag,
-    ProgramOption
-} from './types.ts'
-
 import { format, gray, green, yellow, cyan, red, blue } from '../../imports/std.ts'
-import { manifest } from '../../manifest.ts'
+import { manifest } from './manifest.ts'
+import type { Command, Flag, Option } from './types.ts'
 
 export const LICENSE = `Copyright ${format(new Date(), 'yyyy')} Tom Bazarnik
 Licensed under Apache License, Version 2.0.`
@@ -34,9 +29,9 @@ function renderCommand(commandsObj: any, maxCmdLen: number, command: string) {
 }
 
 export function docopt(
-    commands: ProgramCommand[],
-    options: Record<string, ProgramOption>[],
-    flags: Record<string, ProgramFlag>[]
+    commands: Command[],
+    options: Record<string, Option>[],
+    flags: Record<string, Flag>[]
 ) {
     const commandsObj = Object.assign({ ...commands })
     const maxCmdLen = Math.max(...(Object.keys(Object.assign({ ...commands }))
@@ -50,7 +45,7 @@ export function docopt(
         return `${manifest.name} ${example}  ${gray(description)}`
     })
     const optionsGuide = Array.from(new Set(Object.keys({ ...options, ...flags }).map(entry => {
-        const { aliases, description, defaultValue }: ProgramOption | ProgramFlag =
+        const { aliases, description, defaultValue }: Option | Flag =
             (Object.assign({}, { ...options, ...flags }) as any)[entry]
         const __flags = aliases.join(', ')
         const colored_flags = aliases.map(el => cyan(el)).join(', ')

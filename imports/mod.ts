@@ -2,7 +2,6 @@
 
 export * from './ctrlc.ts'
 export * from './deno_events.ts'
-export * from './deno_run.ts'
 export * from './esbuild.ts'
 export * from './expect.ts'
 export * from './graphqlade.ts'

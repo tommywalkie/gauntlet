@@ -1,8 +1,11 @@
 import { AsyncPushIterator, AsyncPushIteratorSetup } from '../../imports/graphqlade.ts'
-import { join, normalize } from '../../imports/path.ts'
-import { getOS, toArraySync, randomId } from './utils.ts'
+import { join, normalize, isAbsolute } from '../../imports/path.ts'
+import { toArraySync, randomId } from './utils.ts'
 import type { FileSystemLike, FsEvent, WalkEntry } from './fs.ts'
 import type { WatchEvent, WatcherOptions } from './types.ts'
+
+type FileWatcherSetup<T> = (iterator: FileWatcher<T>) => 
+    Promise<(() => unknown) | undefined> | (() => unknown) | undefined
 
 /**
  * Based on an `AsyncIterator` superset originally designed
@@ -12,9 +15,10 @@ import type { WatchEvent, WatcherOptions } from './types.ts'
  */
 export class FileWatcher<T> extends AsyncPushIterator<T> {
     fs: FileSystemLike
+    contents: WalkEntry[] = []
 
-    constructor(setup: AsyncPushIteratorSetup<T>, fs: FileSystemLike) {
-        super(setup)
+    constructor(setup: FileWatcherSetup<T>, fs: FileSystemLike) {
+        super(setup as AsyncPushIteratorSetup<T>)
         this.fs = fs
     }
 }
@@ -26,19 +30,19 @@ function diff(a: WalkEntry[], b: WalkEntry[]) {
 export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
     return new FileWatcher<WatchEvent>((iterator) => {
         let events: Array<WatchEvent & { _id: string }> = []
-        const watcher = options.fs.watch(join(options.fs.cwd(), options.source))
-        const srcIterator: IterableIterator<WalkEntry> = options.fs.walkSync(normalize(options.source))
-        let contents: WalkEntry[] = []
+        const sourcePath = isAbsolute(options.source) ? options.source : join(iterator.fs.cwd(), options.source)
+        const watcher = iterator.fs.watch(sourcePath)
+        const srcIterator: IterableIterator<WalkEntry> = iterator.fs.walkSync(normalize(sourcePath))
 
         function format(str: string) {
-            return normalize(str).substring(join(options.fs.cwd(), options.source).length + 1)
+            return normalize(str).substring(sourcePath.length + 1)
         }
 
         function refreshSource() {
-            const snapshot = [...new Set([...contents])]
-            const srcIterator = options.fs.walkSync(normalize(options.source))
+            const snapshot = [...new Set([...iterator.contents])]
+            const srcIterator = iterator.fs.walkSync(normalize(sourcePath))
             const entries = toArraySync<WalkEntry>(srcIterator)
-            contents = [...new Set([...entries])]
+            iterator.contents = [...new Set([...entries])]
             const addedEntries = diff(entries, snapshot)
             const removedEntries = diff(snapshot, entries)
             for (let index = 0; index < removedEntries.length; index++) {
@@ -53,39 +57,36 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
             }
         }
     
-        async function handleEvent(event: FsEvent) {
+        function handleEvent(event: FsEvent) {
+            // We could listen to inotify events including two paths,
+            // but due to the fact they happen after many related modify events,
+            // they become noise.
             if (event.paths.length === 1) {
                 const path = event.paths[0]
-                const entry = contents.find(
-                    content => content.path === join(options.source, format(path))
+                const entry = iterator.contents.find(
+                    content => content.path === join(sourcePath, format(path))
                 )
-
-                const physicallyExists = options.fs.existsSync(normalize(path))
-                // File saves on MacOS emit 'create' events for whatever reason
-                if (event.kind === 'create' && entry && physicallyExists) event.kind = 'modify'
                 
                 if (event.kind === 'create') {
                     try {
-                        const { isFile, isDirectory, isSymlink } = options.fs.lstatSync(normalize(path))
-                        const entry = {
-                            path: join(options.source, format(path)),
+                        const { isFile, isDirectory, isSymlink } = iterator.fs.lstatSync(path)
+                        const new_entry = {
+                            path: join(sourcePath, format(path)),
                             name: normalize(path).replace(/^.*[\\\/]/, ''),
                             isFile,
                             isDirectory,
                             isSymlink
                         }
                         if (isFile) {
-                            contents.push(entry)
-                            events.push({ _id: randomId(), kind: event.kind as any, entry })
+                            iterator.contents.push(new_entry)
+                            events.push({ _id: randomId(), kind: event.kind as any, entry: new_entry })
                         }
                         else if (isDirectory) refreshSource()
-                    } catch(e) {
-                        refreshSource()
-                    }
+                    } catch(e) {}
                 }
                 if (event.kind === 'modify') {
                     if (entry?.isFile) {
-                        if (options.fs.existsSync(normalize(entry.path)))
+                        if (iterator.fs.existsSync(normalize(entry.path)))
                             events.push({ _id: randomId(), kind: event.kind, entry })
                         else refreshSource()
                     }
@@ -93,8 +94,8 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
                 }
                 if (event.kind === 'remove') {
                     if (entry?.isFile) {
-                        contents = contents.filter(
-                            item => item.path !== join(options.source, format(path))
+                        iterator.contents = iterator.contents.filter(
+                            item => item.path !== join(sourcePath, format(path))
                         )
                         events.push({ _id: randomId(), kind: event.kind, entry })
                     }
@@ -104,7 +105,7 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
         }
 
         const handledIds: string[] = []
-        const intervalId = setInterval(() => {
+        const pollEvents = setInterval(() => {
             if (events.length > 0) {
                 const snapshot = [...events]
                 events = events.filter(el => !snapshot.map(el => el._id).includes(el._id))
@@ -126,29 +127,28 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
         }, 200);
 
         function notifyStart() {
-            const { isFile, isDirectory, isSymlink } = options.fs.lstatSync(normalize(options.source))
-            events.push({
-                _id: randomId(),
+            const { isFile, isDirectory, isSymlink } = iterator.fs.lstatSync(normalize(sourcePath))
+            iterator.push({
                 kind: "watch",
                 entry: {
-                    path: normalize(options.source),
-                    name: normalize(options.source),
+                    path: normalize(sourcePath),
+                    name: normalize(sourcePath).replace(/^.*[\\\/]/, ''),
                     isFile, isDirectory, isSymlink
                 }
             })
         }
     
         (async () => {
-            contents = toArraySync<WalkEntry>(srcIterator)
+            iterator.contents = toArraySync<WalkEntry>(srcIterator)
             notifyStart()
             for await (const event of watcher) {
-                await handleEvent(event)
+                handleEvent(event)
             }
         })()
     
         return () => {
-            clearInterval(intervalId);
-            // Both the hereby watcher and the wrapped file watcher (options.fs.watch)
+            clearInterval(pollEvents);
+            // Both the hereby watcher and the wrapped file watcher (iterator.fs.watch)
             // shall be terminated. Otherwise, async ops may leak and Deno test will fail.
             (watcher as any).return();
         };

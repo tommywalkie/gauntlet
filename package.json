@@ -1,0 +1,27 @@
+{
+  "name": "@tommywalkie/gauntlet",
+  "version": "0.0.4",
+  "description": "Core modules of Gauntlet, the next Deno-based browser-compatible development server",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "scripts": {
+    "test": "deno test -A --unstable",
+    "build": "deno run -A --unstable build.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tommywalkie/gauntlet.git"
+  },
+  "keywords": [
+    "deno",
+    "gauntlet",
+    "build",
+    "esm"
+  ],
+  "author": "Tom Bazarnik <tommywalkie@gmail.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/tommywalkie/gauntlet/issues"
+  },
+  "homepage": "https://github.com/tommywalkie/gauntlet#readme"
+}

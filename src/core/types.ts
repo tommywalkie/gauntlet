@@ -161,7 +161,6 @@ export interface SnowpackPlugin {
     markChanged?(file: string): void;
 }
   
-/** Snowpack Build Plugin type */
 // Copyright 2019 Fred K. Schott. All rights reserved. MIT license.
 export type SnowpackPluginFactory<PluginOptions = object> = (
     snowpackConfig: SnowpackConfig,

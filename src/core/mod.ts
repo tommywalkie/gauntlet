@@ -1,3 +1,4 @@
+export * from './compiler.ts'
 export * from './fs.ts'
 export * from './task.ts'
 export * from './types.ts'

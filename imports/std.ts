@@ -5,5 +5,5 @@
 // Ideally, there should be only Deno-specific modules here (filesystem APIs etc.)
 
 export * from 'https://deno.land/std@0.95.0/fmt/colors.ts'
-export { existsSync, walkSync } from 'https://deno.land/std@0.95.0/fs/mod.ts'
+export { existsSync, walkSync, moveSync, copySync } from 'https://deno.land/std@0.95.0/fs/mod.ts'
 export { format } from "https://deno.land/std@0.95.0/datetime/mod.ts"
