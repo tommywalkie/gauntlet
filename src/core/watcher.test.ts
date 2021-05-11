@@ -36,8 +36,8 @@ it('should be able to track newly added files', async () => {
     const {events} = await track((path: string) => {
         Deno.writeTextFileSync(join(path, "A.txt"), "Hello world")
     })
-    expect(events.length).toBe(Deno.build.os === 'linux' ? 4 : 3)
     expect(events[0].kind).toBe('watch')
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track file saves', async () => {
@@ -47,6 +47,7 @@ it('should be able to track file saves', async () => {
     })
     console.log(events)
     expect(events[0].kind).toBe('watch')
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track copied files', async () => {
@@ -55,7 +56,7 @@ it('should be able to track copied files', async () => {
         Deno.copyFileSync(join(path, 'A.txt'), join(path, 'B.txt'))
     })
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track copied non-empty folders', async () => {
@@ -65,7 +66,7 @@ it('should be able to track copied non-empty folders', async () => {
         copySync(join(path, 'foo'), join(path, 'bar'))
     })
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track copied non-empty folders from outside the watching scope', async () => {
@@ -76,7 +77,7 @@ it('should be able to track copied non-empty folders from outside the watching s
         copySync(unwatchedPath, join(path, 'foo'), { overwrite: true })
     })
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track renamed files', async () => {
@@ -85,7 +86,7 @@ it('should be able to track renamed files', async () => {
         setTimeout(() => Deno.renameSync(join(path, 'A.txt'), join(path, 'B.txt')), 800)
     })
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track renamed non-empty folders', async () => {
@@ -95,7 +96,7 @@ it('should be able to track renamed non-empty folders', async () => {
         setTimeout(() => Deno.renameSync(join(path, 'foo'), join(path, 'bar')), 800)
     })
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track removed files', async () => {
@@ -104,7 +105,7 @@ it('should be able to track removed files', async () => {
         setTimeout(() => Deno.removeSync(join(path, 'A.txt'), { recursive: true }), 800)
     })
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track removed non-empty folders', async () => {
@@ -114,7 +115,7 @@ it('should be able to track removed non-empty folders', async () => {
         setTimeout(() => Deno.removeSync(join(path, 'foo'), { recursive: true }), 800)
     })
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track moved files', async () => {
@@ -124,7 +125,7 @@ it('should be able to track moved files', async () => {
         moveSync(join(path, 'A.txt'), join(path, 'foo', 'A.txt'), { overwrite: true })
     })
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track moved non-empty folders', async () => {
@@ -135,7 +136,7 @@ it('should be able to track moved non-empty folders', async () => {
         moveSync(join(path, 'foo'), join(path, 'bar', 'foo'), { overwrite: true })
     }, 2500)
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
 it('should be able to track moved non-empty folders from outside the watching scope', async () => {
@@ -147,5 +148,5 @@ it('should be able to track moved non-empty folders from outside the watching sc
         moveSync(unwatchedPath, join(path, 'foo'), { overwrite: true })
     }, 2500)
     console.log(events)
-    expect(events.length).toBeGreaterThanOrEqual(0)
+    expect(events.length).toBeGreaterThanOrEqual(1)
 })
