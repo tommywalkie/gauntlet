@@ -3,5 +3,5 @@
 
 export const manifest = {
     name: "gauntlet",
-    version: "0.0.5",
+    version: "0.0.4",
 }
