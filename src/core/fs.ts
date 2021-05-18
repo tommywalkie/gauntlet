@@ -9,17 +9,12 @@ import type {
     WalkEntry
 } from './types.ts'
 
-export type WatchOptions = {
-    recursive?: boolean
-}
-
 /**
  * Virtual filesystem inspired from
  * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs),
  * using `EventEmitter` instead of `rxjs`'s `BehaviourSubject`.
  */
 export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents> implements FileSystemLike {
-    isVirtual: boolean = true
     cwd = () => './'
     private contents = new Map<string, T>();
 
@@ -177,7 +172,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents> impleme
         return createAsyncIterable(this.getChildPaths(normalize(currentPath)))
     }
 
-    watch(paths: string | string[], _options?: WatchOptions): AsyncPushIterator<FsEvent> {
+    watch(paths: string | string[]): AsyncPushIterator<FsEvent> {
         let events: Array<FsEvent & { _id: string }> = []
         return new AsyncPushIterator<FsEvent>((it) => {
             const intervalId = setInterval(() => {

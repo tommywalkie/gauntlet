@@ -21,6 +21,7 @@ Options:
 ${LICENSE}`
 }
 
+// TODO
 function renderCommand(commandsObj: any, maxCmdLen: number, command: string) {
     const { alias, description } = commandsObj[command]
     const example =

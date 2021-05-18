@@ -37,8 +37,12 @@ export function toTypedArray(s: string): Uint8Array {
     return ua;
 }
 
+export function isDeno() {
+    return (globalThis as any)?.Deno != null
+}
+
 export function getOS() {
-    if (globalThis.Deno != null) {
+    if ((globalThis as any)?.Deno != null) {
         return Deno.build.os;
     }
     const navigator = (globalThis as any).navigator

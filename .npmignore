@@ -1,8 +1,30 @@
+# file watching tests
 /__TEST__
+
+# continuous integration
 /.github
+
+# just a folder for experimental stuff
 /experimental
+
+# source code
 /src
+
+# deno imports
 /imports
+
+# typescript files
 /**/*.ts
+
+# docs
 /**/*.md
+
+# pnpm
 pnpm-lock.yaml
+.pnpm-debug.log
+
+# npm
+package-lock.json
+
+# yarn
+yarn.lock

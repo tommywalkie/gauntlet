@@ -1,7 +1,7 @@
 import { existsSync, walkSync } from '../imports/std.ts'
 import type { FileSystemLike } from './core/types.ts'
 
-export const fs: FileSystemLike = {
+export const DenoFileSystem: FileSystemLike = {
     cwd: () => Deno.cwd(),
     existsSync,
     lstatSync: Deno.lstatSync,
@@ -11,5 +11,3 @@ export const fs: FileSystemLike = {
     watch: Deno.watchFs,
     writeFileSync: Deno.writeFileSync,
 }
-
-export { fs as denoFs }

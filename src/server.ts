@@ -1,95 +1,154 @@
-import {
-    Application,
-    ApplicationListenEvent,
-    ApplicationErrorEvent,
-    Context
-} from '../imports/oak.ts'
-import * as esbuild from '../imports/esbuild.ts'
-import { EventEmitter } from '../imports/deno_events.ts'
-import { watchFs } from './core/watcher.ts'
-import { createVirtualFileSystem } from './core/fs.ts'
-import { denoFs } from './fs.ts'
-import type { Gauntlet } from './types.ts'
+import { AsyncPushIterator, AsyncPushIteratorSetup } from "../imports/graphqlade.ts";
+import { EventEmitter } from "../imports/deno_events.ts";
+import { Compiler, CompilerEvent, setupCompiler } from "./core/compiler.ts"
+import { serve, Server, HTTPOptions } from "../imports/std.ts";
+import { FileWatcher, watchFs } from "./core/watcher.ts";
+import { DenoFileSystem } from "./utils.ts";
+import { default as esbuild } from "../imports/esbuild.ts";
+import type { WatchEvent } from "./core/types.ts";
+import type { DevServerEvents } from "./types.ts";
+import type { EsbuildInstance } from "../imports/esbuild.ts";
+
+type DevServerSetup<T> = (iterator: DevServer<T>) => 
+    Promise<(() => unknown) | undefined> | (() => unknown) | undefined
+
+export class DevServer<T> extends AsyncPushIterator<T> {
+    compiler: Compiler
+
+    constructor(setup: DevServerSetup<T>, compiler: Compiler) {
+        super(setup as AsyncPushIteratorSetup<T>)
+        this.compiler = compiler
+    }
+}
 
 export interface DevServerOptions {
     port: number
     mounts: string[]
-    eventSource?: EventEmitter<Gauntlet.Events>
+    eventSource?: EventEmitter<DevServerEvents>
 }
 
-function terminate(eventSource: EventEmitter<Gauntlet.Events>) {
-    eventSource.emit('debug', 'Intercepted SIGINT signal')
-    esbuild.stop()
-    eventSource.emit('debug', 'Gracefully stopped the ESBuild service')
-    eventSource.emit('terminate')
-    Deno.exit()
+type Disposable<T> = [T, (props?: any) => void]
+
+export function initServer(addr: string | HTTPOptions): Disposable<Server> {
+    const options = typeof addr === 'string' ? addr : { port: addr.port, hostname: addr.hostname }
+    const server = serve(options)
+    return [server, () => server.close()]
 }
 
-/**
- * Gracefully stops the Deno process while stopping
- * the running ESBuild service.
- */
-async function gracefulExit(
-    eventSource: EventEmitter<Gauntlet.Events>
-) {
-    // Deno.signal is not yet implemented on Windows.
-    // https://github.com/denoland/deno/issues/9995
-    if (Deno.build.os === 'windows') {
-        const { setHandler } = await import('../imports/ctrlc.ts')
-        const _ = setHandler(() => terminate(eventSource))
-        return
+export function initESBuild(eventSource?: EventEmitter<DevServerEvents>): Disposable<EsbuildInstance> {
+    const instance = esbuild
+    ;(async () => await esbuild.initialize({}).then(() => {
+        if (eventSource) eventSource.emit("debug", "ESBuild service is now running")
+    }))()
+    return [instance, () => instance.stop()]
+}
+
+export function initCompiler(
+    mounts: string[],
+    eventSource?: EventEmitter<DevServerEvents>,
+    onError?: (props?: any) => void
+): Disposable<Compiler> {
+    let watchers: FileWatcher<WatchEvent>[] = []
+    try {
+        watchers = mounts.map((mount) => {
+            return watchFs({ source: mount, fs: DenoFileSystem })
+        })
+        const compiler = setupCompiler({ watchers, onError })
+        return [compiler, () => compiler.return()]
     }
-    // Otherwise, if using UNIX, listen to Deno.signal
-    for await (const _ of Deno.signal(Deno.Signal.SIGINT)) {
-        terminate(eventSource)
+    catch (e) {
+        if (eventSource) eventSource.emit("error", `${e.name}: ${e.message}`)
+        if (eventSource) eventSource.emit('terminate')
+        Deno.exit(1)
     }
 }
 
-export async function runDevServer(options: DevServerOptions = {
+export function runDevServer(options: DevServerOptions = {
     port: 8000,
     mounts: [ Deno.cwd() ],
 }) {
-    const eventSource = options.eventSource ?? new EventEmitter<Gauntlet.Events>()
-    await esbuild.initialize({}).then(_ => eventSource.emit('debug', 'ESBuild service is ready'))
-    const app = new Application()
+    try {
+        const eventSource = options.eventSource
 
-    /* If you need to test virtual filesystem, simply use this */
-    const vfs = createVirtualFileSystem()
-    vfs.add('./src/A.txt', 'A')
-    vfs.add('./src/B/C.txt', 'C')
-    setTimeout(() => vfs.add('./src/A.txt', 'AA'), 4000)
-    setTimeout(() => vfs.add('./src/B/C.txt', 'D'), 4500)
-    setTimeout(() => vfs.add('./src/D.txt', 'D'), 5000)
-    setTimeout(() => vfs.add('./src/E.txt', 'E'), 5200)
-    setTimeout(() => vfs.add('./src/B/F.txt', 'F'), 5100)
-    setTimeout(() => vfs.remove('./src/B'), 5400)
-    setTimeout(() => vfs.remove('./src/E.txt'), 5900)
-    setTimeout(() => vfs.add('./src/A.txt', 'AAA'), 6400)
+        const [compiler, disposeCompiler] = initCompiler(
+            options.mounts,
+            eventSource,
+            (e: Error) => terminate(e)
+        )
+        const [server, disposeServer] = initServer({ port: options.port })
+        const [_esbuildInstance, disposeEsbuild] = initESBuild(eventSource)
 
-    app.use(async (context: Context) => {
-        context.response.body = "Hello world!";
-    })
+        function terminate(err?: Error) {
+            if (err && eventSource) eventSource.emit('error', `${err.name}: ${err.message}`)
+            disposeEsbuild()
+            if (eventSource) eventSource.emit('debug', 'Gracefully stopped the ESBuild service')
+            disposeCompiler()
+            disposeServer()
+            if (eventSource) eventSource.emit('terminate')
+            Deno.exit(1)
+        }
 
-    app.addEventListener("listen", async (evt: ApplicationListenEvent) => {
-        eventSource.emit("listen", evt)
-        const watchers = options.mounts.map(async (mount) => {
-            const watcher = watchFs({ source: mount, fs: denoFs })
-            for await (const event of watcher) {
-                eventSource.emit(event.kind, event.entry)
+        async function gracefulExit() {
+            // Deno.signal is not yet implemented on Windows.
+            // https://github.com/denoland/deno/issues/9995
+            if (Deno.build.os === 'windows') {
+                const { setHandler } = await import('../imports/ctrlc.ts')
+                setHandler(() => {
+                    if (eventSource) eventSource.emit('debug', 'Intercepted SIGINT signal')
+                    terminate()
+                })
             }
-        })
-        // Run watchers and listen for SIGINT signals
-        await Promise.all([...watchers, await gracefulExit(eventSource)])
-    })
+            else {
+                // Otherwise, if using UNIX, listen to Deno.signal
+                for await (const _ of Deno.signal(Deno.Signal.SIGINT)) {
+                    if (eventSource) eventSource.emit('debug', 'Intercepted SIGINT signal')
+                    terminate()
+                }
+            }
+        }
 
-    app.addEventListener("error", async (evt: ApplicationErrorEvent<any, any>) => {
-        eventSource.emit('error', 'Unexpected error encountered with Oak server')
-        console.log(evt.error)
-        esbuild.stop()
-        eventSource.emit('debug', 'Gracefully stopped the ESBuild service')
-        eventSource.emit('terminate')
-        Deno.exit()
-    })
+        return new DevServer<CompilerEvent | { kind: string, details: any }>((iterator) => {
+            try {
+                if (eventSource) eventSource.emit("listen", {
+                    hostname: 'localhost',
+                    port: options.port,
+                    secure: false
+                });
+                
+                setTimeout(async () => {
+                    try {
+                        for await (const event of iterator.compiler) {
+                            if (eventSource) eventSource.emit(
+                                event.kind as keyof DevServerEvents,
+                                event.details
+                            )
+                            iterator.push(event)
+                        }
+                    }
+                    catch (e) {
+                        terminate(e)
+                    }
+                });
     
-    return await app.listen({ port: options.port })
+                setTimeout(async () => {
+                    for await (const request of server) {
+                        iterator.push({ kind: "request", details: request })
+                        request.respond({ status: 200, body: 'hello world' });
+                    }
+                });
+    
+                (async function () { await gracefulExit() })()
+            }
+            catch (e) {
+                terminate(e)
+            }
+            return () => iterator.compiler.return();
+        }, compiler)
+    }
+    catch (e) {
+        esbuild.stop()
+        if (options.eventSource) options.eventSource.emit("fatal", `${e.name}: ${e.message}`)
+        console.error(e)
+        Deno.exit(1)
+    }
 }

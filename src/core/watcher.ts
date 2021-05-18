@@ -4,9 +4,6 @@ import { toArraySync, randomId } from './utils.ts'
 import type { FileSystemLike, FsEvent, WalkEntry } from './fs.ts'
 import type { WatchEvent, WatcherOptions } from './types.ts'
 
-type FileWatcherSetup<T> = (iterator: FileWatcher<T>) => 
-    Promise<(() => unknown) | undefined> | (() => unknown) | undefined
-
 /**
  * Based on an `AsyncIterator` superset originally designed
  * for [`graphqlade`](https://github.com/morris/graphqlade), the file watcher is intended
@@ -16,10 +13,12 @@ type FileWatcherSetup<T> = (iterator: FileWatcher<T>) =>
 export class FileWatcher<T> extends AsyncPushIterator<T> {
     fs: FileSystemLike
     contents: WalkEntry[] = []
+    mount: string
 
-    constructor(setup: FileWatcherSetup<T>, fs: FileSystemLike) {
+    constructor(setup: (iterator: FileWatcher<T>) => void, fs: FileSystemLike, mount: string) {
         super(setup as AsyncPushIteratorSetup<T>)
         this.fs = fs
+        this.mount = normalize(mount)
     }
 }
 
@@ -27,10 +26,27 @@ function diff(a: WalkEntry[], b: WalkEntry[]) {
     return a.filter(item1 => !b.some(item2 => (item2.path === item1.path)))
 }
 
+function processNotFoundMountErrorArgs(literralEntry: string, mount: string, cwd: string) {
+    const explanation = isAbsolute(literralEntry) ? `"${literralEntry}" is an absolute path, check your filesystem or consider using ".${literralEntry}" instead.` : `"${literralEntry}" doesn't exist in current working directory "${cwd}".`
+    return `Cannot init file watcher. Mount directory not found.
+    ${explanation}`
+}
+
+export class NotFoundMountError extends Error {
+    name = "NotFoundMountError"
+    constructor(literralEntry: string, mount: string, cwd: string) {
+        super(processNotFoundMountErrorArgs(literralEntry, mount, cwd));
+        Object.setPrototypeOf(this, NotFoundMountError.prototype)
+    }
+}
+
 export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
-    return new FileWatcher<WatchEvent>((iterator) => {
+    const sourcePath = isAbsolute(options.source) ? options.source : join(options.fs.cwd(), options.source)
+    if (!options.fs.existsSync(sourcePath)) {
+        throw new NotFoundMountError(options.source, sourcePath, options.fs.cwd())
+    }
+    const setup = (iterator: FileWatcher<WatchEvent>) => {
         let events: Array<WatchEvent & { _id: string }> = []
-        const sourcePath = isAbsolute(options.source) ? options.source : join(iterator.fs.cwd(), options.source)
         const watcher = iterator.fs.watch(sourcePath)
         const srcIterator: IterableIterator<WalkEntry> = iterator.fs.walkSync(normalize(sourcePath))
 
@@ -64,7 +80,7 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
             if (event.paths.length === 1) {
                 const path = event.paths[0]
                 const entry = iterator.contents.find(
-                    content => content.path === join(sourcePath, format(path))
+                    (content: WalkEntry) => content.path === join(sourcePath, format(path))
                 )
                 
                 if (event.kind === 'create') {
@@ -95,7 +111,7 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
                 if (event.kind === 'remove') {
                     if (entry?.isFile) {
                         iterator.contents = iterator.contents.filter(
-                            item => item.path !== join(sourcePath, format(path))
+                            (item: WalkEntry) => item.path !== join(sourcePath, format(path))
                         )
                         events.push({ _id: randomId(), kind: event.kind, entry })
                     }
@@ -152,5 +168,10 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
             // shall be terminated. Otherwise, async ops may leak and Deno test will fail.
             (watcher as any).return();
         };
-    }, options.fs)
+    }
+    return new FileWatcher<WatchEvent>(
+        setup,
+        options.fs,
+        options.source
+    )
 }

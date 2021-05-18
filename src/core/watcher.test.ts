@@ -1,8 +1,8 @@
 import { expect, it } from '../../imports/expect.ts'
 import { moveSync, copySync } from '../../imports/std.ts'
-import { fs } from '../fs.ts'
-import { FileWatcher, watchFs } from './watcher.ts'
 import { join } from '../../imports/path.ts'
+import { DenoFileSystem as fs } from '../utils.ts'
+import { FileWatcher, watchFs } from './watcher.ts'
 import { randomId } from './utils.ts'
 import { WatchEvent } from './types.ts'
 
@@ -45,7 +45,7 @@ it('should be able to track file saves', async () => {
         Deno.writeTextFileSync(join(path, "A.txt"), "Hello world\n")
         Deno.writeTextFileSync(join(path, "A.txt"), "Lorem ipsum\n")
     })
-    console.log(events)
+    // console.log(events)
     expect(events[0].kind).toBe('watch')
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
@@ -55,7 +55,7 @@ it('should be able to track copied files', async () => {
         Deno.writeTextFileSync(join(path, 'A.txt'), 'Hello world')
         Deno.copyFileSync(join(path, 'A.txt'), join(path, 'B.txt'))
     })
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
@@ -65,7 +65,7 @@ it('should be able to track copied non-empty folders', async () => {
         Deno.writeTextFileSync(join(path, 'foo', 'A.txt'), 'Hello world')
         copySync(join(path, 'foo'), join(path, 'bar'))
     })
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
@@ -76,7 +76,7 @@ it('should be able to track copied non-empty folders from outside the watching s
     const {events} = await track((path: string) => {
         copySync(unwatchedPath, join(path, 'foo'), { overwrite: true })
     })
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
@@ -85,7 +85,7 @@ it('should be able to track renamed files', async () => {
         Deno.writeTextFileSync(join(path, 'A.txt'), 'Hello world')
         setTimeout(() => Deno.renameSync(join(path, 'A.txt'), join(path, 'B.txt')), 800)
     })
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
@@ -95,7 +95,7 @@ it('should be able to track renamed non-empty folders', async () => {
         Deno.writeTextFileSync(join(path, 'foo', 'A.txt'), 'Hello world')
         setTimeout(() => Deno.renameSync(join(path, 'foo'), join(path, 'bar')), 800)
     })
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
@@ -104,7 +104,7 @@ it('should be able to track removed files', async () => {
         Deno.writeTextFileSync(join(path, 'A.txt'), 'Hello world')
         setTimeout(() => Deno.removeSync(join(path, 'A.txt'), { recursive: true }), 800)
     })
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
@@ -114,7 +114,7 @@ it('should be able to track removed non-empty folders', async () => {
         Deno.writeTextFileSync(join(path, 'foo/A.txt'), 'Hello world')
         setTimeout(() => Deno.removeSync(join(path, 'foo'), { recursive: true }), 800)
     })
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
@@ -124,7 +124,7 @@ it('should be able to track moved files', async () => {
         Deno.mkdirSync(join(path, 'foo'), { recursive: true })
         moveSync(join(path, 'A.txt'), join(path, 'foo', 'A.txt'), { overwrite: true })
     })
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
@@ -135,7 +135,7 @@ it('should be able to track moved non-empty folders', async () => {
         Deno.mkdirSync(join(path, 'bar'), { recursive: true })
         moveSync(join(path, 'foo'), join(path, 'bar', 'foo'), { overwrite: true })
     }, 2500)
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })
 
@@ -147,6 +147,6 @@ it('should be able to track moved non-empty folders from outside the watching sc
         Deno.mkdirSync(join(path, 'foo'), { recursive: true })
         moveSync(unwatchedPath, join(path, 'foo'), { overwrite: true })
     }, 2500)
-    console.log(events)
+    // console.log(events)
     expect(events.length).toBeGreaterThanOrEqual(1)
 })

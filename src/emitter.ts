@@ -2,7 +2,7 @@ import { EventEmitter } from '../imports/deno_events.ts'
 import { cyan, gray, green, yellow, red, blue, bold } from '../imports/std.ts'
 import { normalize } from '../imports/path.ts'
 import { WalkEntry } from './core/fs.ts'
-import type { Gauntlet } from './types.ts'
+import type { DevServerEvents } from './types.ts'
 
 const DEBUG_PREFIX = `${gray('[')}${bold(blue('DEBUG'))}${gray('] —')}`
 const WARN_PREFIX = `${gray('[')}${bold(yellow('WARN'))}${gray('] ——')}`
@@ -33,7 +33,7 @@ const logger = new class {
 }
 
 function displayFileName(path: WalkEntry) {
-    return bold(yellow(path?.path ?? 'unknown'))
+    return bold(yellow(path?.name ?? 'unknown'))
 }
 
 function displayContentType(path: WalkEntry) {
@@ -44,7 +44,7 @@ function capitalize(str: string) {
     return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-const emitter = new EventEmitter<Gauntlet.Events>()
+const emitter = new EventEmitter<DevServerEvents>()
 
 emitter.on("watch", (entry: WalkEntry) =>
     logger.info(`Now watching ${bold(yellow(normalize(entry.path)))} for file changes...`))

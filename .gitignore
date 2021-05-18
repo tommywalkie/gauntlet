@@ -1,7 +1,21 @@
+# file watching tests
 /__TEST__
+
+# build outputs
 /dist
+
+# normally we shouldn't have node deps but just in case
 /node_modules
+
+# just a folder for experimental stuff
 /experimental
+
+# pnpm
 pnpm-lock.yaml
 .pnpm-debug.log
+
+# npm
 package-lock.json
+
+# yarn
+yarn.lock
