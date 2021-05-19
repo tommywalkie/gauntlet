@@ -1,10 +1,8 @@
 /**
- * File system events
- *
- * This is basically a high-level `Deno.FsEvent` wrapper, leveraging
- * unintuitive behaviours on non-Unix systems with `Deno.watchFs`.
+ * File watching events interface, designed for the `EventEmitter<T>`
+ * implementation from `deno_events`
  */
-export interface FileEvents {
+export interface WatchEvents {
   modify(path: WalkEntry): void;
   create(path: WalkEntry): void;
   remove(path: WalkEntry): void;
@@ -12,8 +10,9 @@ export interface FileEvents {
 }
 
 /**
- * Base events interface for `EventEmitter<T>` from `deno_events`,
- * should be used for fine-grained debugging and crash reporting.
+ * Base events interface, designed for the `EventEmitter<T>`
+ * implementation from `deno_events`, should be used for
+ * fine-grained debugging and crash reporting.
  */
 export interface LogEvents {
   fatal(description: string, error?: Error): void;
@@ -23,8 +22,23 @@ export interface LogEvents {
   debug(description: string): void;
 }
 
+export interface Events {
+  modify(path: WalkEntry): void;
+  create(path: WalkEntry): void;
+  remove(path: WalkEntry): void;
+  watch(entry: WalkEntry): void;
+  fatal(description: string, error?: Error): void;
+  error(description: string, error?: Error): void;
+  warn(description: string): void;
+  info(description: string): void;
+  debug(description: string): void;
+}
+
+/**
+ * File watching event object
+ */
 export interface WatchEvent {
-  kind: keyof FileEvents;
+  kind: keyof WatchEvents;
   entry: WalkEntry;
 }
 
@@ -33,6 +47,9 @@ export interface WatcherOptions {
   fs: FileSystemLike;
 }
 
+/**
+ * Base file watching event
+ */
 export interface FsEvent {
   kind: "create" | "modify" | "remove" | string;
   paths: string[];

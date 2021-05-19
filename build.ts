@@ -12,7 +12,9 @@ try {
 
   try {
     Deno.removeSync("./dist", { recursive: true });
-  } catch (e) {}
+  } catch (e) {
+    // Do nothing, this means the folder didn't exist in the first place.
+  }
   Deno.mkdirSync("./dist");
 
   // ESM build

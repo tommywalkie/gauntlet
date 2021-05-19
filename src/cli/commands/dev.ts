@@ -7,8 +7,8 @@ export async function dev(_props: any) {
     const devServer = runDevServer({
       port: 8000,
       eventSource: defaultEmitter,
-      // mounts: [ './src', './imports' ]
-      mounts: ["./src"],
+      mounts: [ './src', './imports' ]
+      // mounts: ["./src"],
     });
 
     for await (const _ of devServer) {

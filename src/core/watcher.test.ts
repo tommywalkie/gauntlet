@@ -8,7 +8,9 @@ import { WatchEvent } from "./types.ts";
 
 try {
   Deno.removeSync(join(Deno.cwd(), "__TEST__"), { recursive: true });
-} catch (_) {}
+} catch (_) {
+  // Do nothing, this means the folder didn't exist in the first place.
+}
 Deno.mkdirSync(join(Deno.cwd(), "__TEST__"), { recursive: true });
 
 async function track(

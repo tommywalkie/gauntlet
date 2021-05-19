@@ -2,7 +2,7 @@ import * as coreTypes from "./core/types.ts";
 import type { ServerRequest } from "../imports/std.ts";
 
 export interface DevServerEvents
-  extends coreTypes.LogEvents, coreTypes.FileEvents {
+  extends coreTypes.LogEvents, coreTypes.WatchEvents {
   listen(event: {
     hostname?: string;
     port: number;

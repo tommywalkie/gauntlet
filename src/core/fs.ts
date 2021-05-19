@@ -3,10 +3,10 @@ import { normalize } from "../../imports/path.ts";
 import { EventEmitter } from "../../imports/deno_events.ts";
 import { randomId, toTypedArray } from "./utils.ts";
 import type {
-  FileEvents,
   FileSystemLike,
   FsEvent,
   WalkEntry,
+  WatchEvents,
 } from "./types.ts";
 
 /**
@@ -14,9 +14,9 @@ import type {
  * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs),
  * using `EventEmitter` instead of `rxjs`'s `BehaviourSubject`.
  */
-export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents>
+export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
   implements FileSystemLike {
-  cwd = () => "./";
+  cwd = () => "/";
   private contents = new Map<string, T>();
 
   get size() {
@@ -31,7 +31,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents>
     };
   }
 
-  add(path: string, value?: T): VirtualFileSystem<T> {
+  add(path: string, value?: any): VirtualFileSystem<T> {
     let walkEntry, _exists = false;
     const nPath = normalize(path);
     if (this.existsSync(nPath)) {
@@ -46,7 +46,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents>
         isSymlink: false,
       };
     }
-    this.contents.set(nPath, value as T);
+    this.contents.set(nPath, value);
     if (_exists) {
       this.emit("modify", walkEntry);
     } else {
@@ -71,7 +71,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents>
 
     if (this.contents.has(path)) {
       const walkEntry = this.getEntryFrom(path);
-      this.contents.set(moveTo, this.read(path));
+      this.contents.set(moveTo, this.read(path) as T);
       this.contents.delete(path);
       this.emit("remove", walkEntry);
     }
@@ -85,7 +85,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents>
         path: newPath,
         ...this.lstatSync(path),
       };
-      this.contents.set(newPath, this.read(p));
+      this.contents.set(newPath, this.read(p) as T);
       this.contents.delete(p);
       this.emit("remove", walkEntry);
       this.emit("create", newWalkEntry);
@@ -94,13 +94,13 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents>
     return this;
   }
 
-  clear(): VirtualFileSystem {
+  clear(): VirtualFileSystem<T> {
     this.contents.clear();
     return this;
   }
 
-  read(path: string): T {
-    return this.contents.get(path) as T;
+  read(path: string) {
+    return this.contents.get(path);
   }
 
   mkdirSync(path: string | URL) {
@@ -123,7 +123,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents>
 
   writeFileSync(path: string | URL, data: Uint8Array) {
     const str = new TextDecoder().decode(data);
-    this.add(String(path), str as any);
+    this.add(String(path), str);
   }
 
   exists(filePath: string) {
@@ -275,10 +275,10 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents>
       }, []);
   }
 
-  map<R>(fn: (res: T, path: string) => R): VirtualFileSystem<R> {
-    const res = new VirtualFileSystem<R>();
+  map<R>(fn: (res: T, path: string) => string): VirtualFileSystem<R> {
+    const res = new VirtualFileSystem();
     this.contents.forEach((item, key) => {
-      res.add(key, fn(item, key) as R);
+      res.add(key, fn(item, key));
     });
     return res;
   }
@@ -299,8 +299,8 @@ export class VirtualFileSystem<T = any> extends EventEmitter<FileEvents>
  * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs)'s `VirtualFileSystem<T>` class,
  * plus `FileSystemLike` bindings including `lstat`, `walk`, `exists`, etc.
  */
-export function createVirtualFileSystem<T = any>(): VirtualFileSystem<T> {
-  return new VirtualFileSystem<T>();
+export function createVirtualFileSystem(): VirtualFileSystem {
+  return new VirtualFileSystem();
 }
 
-export type { FileEvents, FileSystemLike, FsEvent, WalkEntry };
+export type { FileSystemLike, FsEvent, WalkEntry };

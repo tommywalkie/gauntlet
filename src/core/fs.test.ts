@@ -69,7 +69,7 @@ it("should be able to watch a virtual filesystem", async () => {
   setTimeout(() => fs.remove("/B.txt"), 320);
   const watcher = fs.watch("/");
   setTimeout(() => {
-    (watcher as any).return();
+    watcher.return();
   }, 400);
   for await (const event of watcher) {
     incr.push(event.kind);
