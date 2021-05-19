@@ -1,5 +1,6 @@
 /// WARNING! This file is strictly meant for Github Actions caching purposes.
 
+export * from "./buffer.ts";
 export * from "./ctrlc.ts";
 export * from "./deno_events.ts";
 export * from "./esbuild.ts";
