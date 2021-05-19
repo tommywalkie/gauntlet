@@ -1,3 +1,4 @@
+<!-- deno-fmt-ignore-file -->
 <p align="center">
   <h1 align="center">Gauntlet</h1>
 </p>

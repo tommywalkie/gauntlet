@@ -1,13 +1,14 @@
 {
   "name": "@tommywalkie/gauntlet",
   "private": false,
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Core modules of Gauntlet, the next Deno-based browser-compatible development server",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "scripts": {
     "test": "deno test -A --unstable",
-    "build": "deno run -A --unstable build.ts"
+    "build": "deno run -A --unstable build.ts",
+    "fmt": "deno fmt --check"
   },
   "repository": {
     "type": "git",

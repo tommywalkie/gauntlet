@@ -1,7 +1,10 @@
-import { AsyncPushIterator, AsyncPushIteratorSetup } from "../imports/graphqlade.ts";
+import {
+  AsyncPushIterator,
+  AsyncPushIteratorSetup,
+} from "../imports/graphqlade.ts";
 import { EventEmitter } from "../imports/deno_events.ts";
-import { Compiler, CompilerEvent, setupCompiler } from "./core/compiler.ts"
-import { serve, Server, HTTPOptions } from "../imports/std.ts";
+import { Compiler, CompilerEvent, setupCompiler } from "./core/compiler.ts";
+import { HTTPOptions, serve, Server } from "../imports/std.ts";
 import { FileWatcher, watchFs } from "./core/watcher.ts";
 import { DenoFileSystem } from "./utils.ts";
 import { default as esbuild } from "../imports/esbuild.ts";
@@ -9,146 +12,168 @@ import type { WatchEvent } from "./core/types.ts";
 import type { DevServerEvents } from "./types.ts";
 import type { EsbuildInstance } from "../imports/esbuild.ts";
 
-type DevServerSetup<T> = (iterator: DevServer<T>) => 
-    Promise<(() => unknown) | undefined> | (() => unknown) | undefined
+type DevServerSetup<T> = (
+  iterator: DevServer<T>,
+) => Promise<(() => unknown) | undefined> | (() => unknown) | undefined;
 
 export class DevServer<T> extends AsyncPushIterator<T> {
-    compiler: Compiler
+  compiler: Compiler;
 
-    constructor(setup: DevServerSetup<T>, compiler: Compiler) {
-        super(setup as AsyncPushIteratorSetup<T>)
-        this.compiler = compiler
-    }
+  constructor(setup: DevServerSetup<T>, compiler: Compiler) {
+    super(setup as AsyncPushIteratorSetup<T>);
+    this.compiler = compiler;
+  }
 }
 
 export interface DevServerOptions {
-    port: number
-    mounts: string[]
-    eventSource?: EventEmitter<DevServerEvents>
+  port: number;
+  mounts: string[];
+  eventSource?: EventEmitter<DevServerEvents>;
 }
 
-type Disposable<T> = [T, (props?: any) => void]
+type Disposable<T> = [T, (props?: any) => void];
 
-export function initServer(addr: string | HTTPOptions): Disposable<Server> {
-    const options = typeof addr === 'string' ? addr : { port: addr.port, hostname: addr.hostname }
-    const server = serve(options)
-    return [server, () => server.close()]
+function initServer(addr: string | HTTPOptions): Disposable<Server> {
+  const options = typeof addr === "string"
+    ? addr
+    : { port: addr.port, hostname: addr.hostname };
+  const server = serve(options);
+  return [server, () => server.close()];
 }
 
-export function initESBuild(eventSource?: EventEmitter<DevServerEvents>): Disposable<EsbuildInstance> {
-    const instance = esbuild
-    ;(async () => await esbuild.initialize({}).then(() => {
-        if (eventSource) eventSource.emit("debug", "ESBuild service is now running")
-    }))()
-    return [instance, () => instance.stop()]
+function initESBuild(
+  eventSource?: EventEmitter<DevServerEvents>,
+): Disposable<EsbuildInstance> {
+  const instance = esbuild;
+  (async () =>
+    await esbuild.initialize({}).then(() => {
+      if (eventSource) {
+        eventSource.emit("debug", "ESBuild service is now running");
+      }
+    }))();
+  return [instance, () => instance.stop()];
 }
 
-export function initCompiler(
-    mounts: string[],
-    eventSource?: EventEmitter<DevServerEvents>,
-    onError?: (props?: any) => void
+function initCompiler(
+  mounts: string[],
+  eventSource?: EventEmitter<DevServerEvents>,
+  onError?: (props?: any) => void,
 ): Disposable<Compiler> {
-    let watchers: FileWatcher<WatchEvent>[] = []
-    try {
-        watchers = mounts.map((mount) => {
-            return watchFs({ source: mount, fs: DenoFileSystem })
-        })
-        const compiler = setupCompiler({ watchers, onError })
-        return [compiler, () => compiler.return()]
-    }
-    catch (e) {
-        if (eventSource) eventSource.emit("error", `${e.name}: ${e.message}`)
-        if (eventSource) eventSource.emit('terminate')
-        Deno.exit(1)
-    }
+  let watchers: FileWatcher<WatchEvent>[] = [];
+  try {
+    watchers = mounts.map((mount) => {
+      return watchFs({ source: mount, fs: DenoFileSystem });
+    });
+    const compiler = setupCompiler({ watchers, onError });
+    return [compiler, () => compiler.return()];
+  } catch (e) {
+    if (eventSource) eventSource.emit("error", `${e.name}: ${e.message}`);
+    if (eventSource) eventSource.emit("terminate");
+    Deno.exit(1);
+  }
 }
 
 export function runDevServer(options: DevServerOptions = {
-    port: 8000,
-    mounts: [ Deno.cwd() ],
+  port: 8000,
+  mounts: [Deno.cwd()],
 }) {
-    try {
-        const eventSource = options.eventSource
+  try {
+    const eventSource = options.eventSource;
 
-        const [compiler, disposeCompiler] = initCompiler(
-            options.mounts,
-            eventSource,
-            (e: Error) => terminate(e)
-        )
-        const [server, disposeServer] = initServer({ port: options.port })
-        const [_esbuildInstance, disposeEsbuild] = initESBuild(eventSource)
+    const [compiler, disposeCompiler] = initCompiler(
+      options.mounts,
+      eventSource,
+      (e: Error) => terminate(e),
+    );
+    const [server, disposeServer] = initServer({ port: options.port });
+    const [_esbuildInstance, disposeEsbuild] = initESBuild(eventSource);
 
-        function terminate(err?: Error) {
-            if (err && eventSource) eventSource.emit('error', `${err.name}: ${err.message}`)
-            disposeEsbuild()
-            if (eventSource) eventSource.emit('debug', 'Gracefully stopped the ESBuild service')
-            disposeCompiler()
-            disposeServer()
-            if (eventSource) eventSource.emit('terminate')
-            Deno.exit(1)
+    function terminate(err?: Error) {
+      if (err && eventSource) {
+        eventSource.emit("error", `${err.name}: ${err.message}`);
+      }
+      disposeEsbuild();
+      if (eventSource) {
+        eventSource.emit("debug", "Gracefully stopped the ESBuild service");
+      }
+      disposeCompiler();
+      disposeServer();
+      if (eventSource) eventSource.emit("terminate");
+      Deno.exit(1);
+    }
+
+    async function gracefulExit() {
+      // Deno.signal is not yet implemented on Windows.
+      // https://github.com/denoland/deno/issues/9995
+      if (Deno.build.os === "windows") {
+        const { setHandler } = await import("../imports/ctrlc.ts");
+        setHandler(() => {
+          if (eventSource) {
+            eventSource.emit("debug", "Intercepted SIGINT signal");
+          }
+          terminate();
+        });
+      } else {
+        // Otherwise, if using UNIX, listen to Deno.signal
+        for await (const _ of Deno.signal(Deno.Signal.SIGINT)) {
+          if (eventSource) {
+            eventSource.emit("debug", "Intercepted SIGINT signal");
+          }
+          terminate();
         }
+      }
+    }
 
-        async function gracefulExit() {
-            // Deno.signal is not yet implemented on Windows.
-            // https://github.com/denoland/deno/issues/9995
-            if (Deno.build.os === 'windows') {
-                const { setHandler } = await import('../imports/ctrlc.ts')
-                setHandler(() => {
-                    if (eventSource) eventSource.emit('debug', 'Intercepted SIGINT signal')
-                    terminate()
-                })
-            }
-            else {
-                // Otherwise, if using UNIX, listen to Deno.signal
-                for await (const _ of Deno.signal(Deno.Signal.SIGINT)) {
-                    if (eventSource) eventSource.emit('debug', 'Intercepted SIGINT signal')
-                    terminate()
-                }
-            }
-        }
+    return new DevServer<CompilerEvent | { kind: string; details: any }>(
+      (iterator) => {
+        try {
+          if (eventSource) {
+            eventSource.emit("listen", {
+              hostname: "localhost",
+              port: options.port,
+              secure: false,
+            });
+          }
 
-        return new DevServer<CompilerEvent | { kind: string, details: any }>((iterator) => {
+          setTimeout(async () => {
             try {
-                if (eventSource) eventSource.emit("listen", {
-                    hostname: 'localhost',
-                    port: options.port,
-                    secure: false
-                });
-                
-                setTimeout(async () => {
-                    try {
-                        for await (const event of iterator.compiler) {
-                            if (eventSource) eventSource.emit(
-                                event.kind as keyof DevServerEvents,
-                                event.details
-                            )
-                            iterator.push(event)
-                        }
-                    }
-                    catch (e) {
-                        terminate(e)
-                    }
-                });
-    
-                setTimeout(async () => {
-                    for await (const request of server) {
-                        iterator.push({ kind: "request", details: request })
-                        request.respond({ status: 200, body: 'hello world' });
-                    }
-                });
-    
-                (async function () { await gracefulExit() })()
+              for await (const event of iterator.compiler) {
+                if (eventSource) {
+                  eventSource.emit(
+                    event.kind as keyof DevServerEvents,
+                    event.details,
+                  );
+                }
+                iterator.push(event);
+              }
+            } catch (e) {
+              terminate(e);
             }
-            catch (e) {
-                terminate(e)
+          });
+
+          setTimeout(async () => {
+            for await (const request of server) {
+              iterator.push({ kind: "request", details: request });
+              request.respond({ status: 200, body: "hello world" });
             }
-            return () => iterator.compiler.return();
-        }, compiler)
+          });
+
+          (async function () {
+            await gracefulExit();
+          })();
+        } catch (e) {
+          terminate(e);
+        }
+        return () => iterator.compiler.return();
+      },
+      compiler,
+    );
+  } catch (e) {
+    esbuild.stop();
+    if (options.eventSource) {
+      options.eventSource.emit("fatal", `${e.name}: ${e.message}`);
     }
-    catch (e) {
-        esbuild.stop()
-        if (options.eventSource) options.eventSource.emit("fatal", `${e.name}: ${e.message}`)
-        console.error(e)
-        Deno.exit(1)
-    }
+    console.error(e);
+    Deno.exit(1);
+  }
 }

@@ -1,3 +1,4 @@
+<!-- deno-fmt-ignore-file -->
 # Contributing
 
 Welcome and thanks for your interest in contributing! Please read carefully through our guidelines below to ensure that your contribution adheres to our  project's standards.

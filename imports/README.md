@@ -1,3 +1,4 @@
+<!-- deno-fmt-ignore-file -->
 # Gauntlet `imports`
 
 The hereby folder is basically a `deps.ts` replacement, using [Meteor-inspired `imports`](https://guide.meteor.com/structure.html#javascript-structure).

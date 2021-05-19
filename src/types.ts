@@ -1,12 +1,13 @@
-import * as coreTypes from './core/types.ts'
+import * as coreTypes from "./core/types.ts";
 import type { ServerRequest } from "../imports/std.ts";
 
-export interface DevServerEvents extends coreTypes.LogEvents, coreTypes.FileEvents {
-    listen(event: {
-        hostname?: string;
-        port: number;
-        secure: boolean;
-    }): void
-    request(req: ServerRequest): void
-    terminate(): void
+export interface DevServerEvents
+  extends coreTypes.LogEvents, coreTypes.FileEvents {
+  listen(event: {
+    hostname?: string;
+    port: number;
+    secure: boolean;
+  }): void;
+  request(req: ServerRequest): void;
+  terminate(): void;
 }

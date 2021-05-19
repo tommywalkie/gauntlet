@@ -1,16 +1,16 @@
-import { format, gray, green, yellow, cyan, blue } from "../../imports/std.ts";
+import { blue, cyan, format, gray, green, yellow } from "../../imports/std.ts";
 import { manifest } from "./manifest.ts";
 import type { Command, Flag, Option } from "./types.ts";
 
-export const LICENSE = `Copyright ${format(new Date(), 'yyyy')} Tom Bazarnik
-Licensed under Apache License, Version 2.0.`
+export const LICENSE = `Copyright ${format(new Date(), "yyyy")} Tom Bazarnik
+Licensed under Apache License, Version 2.0.`;
 
-export const VERSION = `${manifest.name} ${yellow('v' + manifest.version)}`
+export const VERSION = `${manifest.name} ${yellow("v" + manifest.version)}`;
 
-const NEXT_LINE_ALINEA = '\n   '
+const NEXT_LINE_ALINEA = "\n   ";
 
 function render(usageExamples: string[], optionsGuide: string[]) {
-    return `${VERSION}
+  return `${VERSION}
 
 Usage:
    ${usageExamples.join(NEXT_LINE_ALINEA)}
@@ -18,41 +18,56 @@ Usage:
 Options:
    ${optionsGuide.join(NEXT_LINE_ALINEA)}
 
-${LICENSE}`
+${LICENSE}`;
 }
 
 // TODO
-function renderCommand(commandsObj: any, maxCmdLen: number, command: string) {
-    const { alias, description } = commandsObj[command]
-    const example =
-        alias + Array.from(Array(maxCmdLen - alias.length).keys()).map(_ => ' ').join('')
-    return `${manifest.name} ${example}  ${description}`
+function _renderCommand(commandsObj: any, maxCmdLen: number, command: string) {
+  const { alias, description } = commandsObj[command];
+  const example = alias +
+    new Array(maxCmdLen - alias.length).join("");
+  return `${manifest.name} ${example}  ${description}`;
 }
 
 export function docopt(
-    commands: Command[],
-    options: Record<string, Option>[],
-    flags: Record<string, Flag>[]
+  commands: Command[],
+  options: Record<string, Option>[],
+  flags: Record<string, Flag>[],
 ) {
-    const commandsObj = Object.assign({ ...commands })
-    const maxCmdLen = Math.max(...(Object.keys(Object.assign({ ...commands }))
-        .map(el => commandsObj[el].alias.length) as number[]))
-    const maxOptLen = Math.max(...(Object.keys({ ...options, ...flags }).map(command => 
-        (Object.assign({}, { ...options, ...flags }) as any)[command].aliases.join(', ').length) as number[]))
-    const usageExamples = Object.keys({ ...commands }).map(command => {
-        const { alias, description } = commandsObj[command]
-        const example =
-            green(alias) + Array.from(Array(maxCmdLen - alias.length).keys()).map(_ => ' ').join('')
-        return `${manifest.name} ${example}  ${gray(description)}`
-    })
-    const optionsGuide = Array.from(new Set(Object.keys({ ...options, ...flags }).map(entry => {
+  const commandsObj = Object.assign({ ...commands });
+  const maxCmdLen = Math.max(
+    ...(Object.keys(Object.assign({ ...commands }))
+      .map((el) => commandsObj[el].alias.length) as number[]),
+  );
+  const maxOptLen = Math.max(
+    ...(Object.keys({ ...options, ...flags }).map((command) =>
+      ({ ...options, ...flags } as any)[command].aliases
+        .join(", ").length
+    )),
+  );
+  const usageExamples = Object.keys({ ...commands }).map((command) => {
+    const { alias, description } = commandsObj[command];
+    const example = green(alias) +
+      Array.from(Array(maxCmdLen - alias.length).keys()).map((_) => " ").join(
+        "",
+      );
+    return `${manifest.name} ${example}  ${gray(description)}`;
+  });
+  const optionsGuide = Array.from(
+    new Set(
+      Object.keys({ ...options, ...flags }).map((entry) => {
         const { aliases, description, defaultValue }: Option | Flag =
-            (Object.assign({}, { ...options, ...flags }) as any)[entry]
-        const __flags = aliases.join(', ')
-        const colored_flags = aliases.map(el => cyan(el)).join(', ')
-        const optionDisplay =
-            colored_flags + Array.from(Array(maxOptLen - __flags.length).keys()).map(_ => ' ').join('')
-        return `${optionDisplay}  ${gray(description)} ${defaultValue ? gray(`[default=${blue(String(defaultValue))}]`) : ''}`
-    })))
-    return render(usageExamples, optionsGuide)
+          (Object.assign({}, { ...options, ...flags }) as any)[entry];
+        const __flags = aliases.join(", ");
+        const colored_flags = aliases.map((el) => cyan(el)).join(", ");
+        const optionDisplay = colored_flags +
+          Array.from(Array(maxOptLen - __flags.length).keys()).map((_) => " ")
+            .join("");
+        return `${optionDisplay}  ${gray(description)} ${
+          defaultValue ? gray(`[default=${blue(String(defaultValue))}]`) : ""
+        }`;
+      }),
+    ),
+  );
+  return render(usageExamples, optionsGuide);
 }
