@@ -1,6 +1,6 @@
-import { format, gray, green, yellow, cyan, red, blue } from '../../imports/std.ts'
-import { manifest } from './manifest.ts'
-import type { Command, Flag, Option } from './types.ts'
+import { format, gray, green, yellow, cyan, blue } from "../../imports/std.ts";
+import { manifest } from "./manifest.ts";
+import type { Command, Flag, Option } from "./types.ts";
 
 export const LICENSE = `Copyright ${format(new Date(), 'yyyy')} Tom Bazarnik
 Licensed under Apache License, Version 2.0.`

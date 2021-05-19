@@ -1,8 +1,8 @@
-import { AsyncPushIterator, AsyncPushIteratorSetup } from '../../imports/graphqlade.ts'
-import { join, normalize, isAbsolute } from '../../imports/path.ts'
-import { toArraySync, randomId } from './utils.ts'
-import type { FileSystemLike, FsEvent, WalkEntry } from './fs.ts'
-import type { WatchEvent, WatcherOptions } from './types.ts'
+import { AsyncPushIterator, AsyncPushIteratorSetup } from "../../imports/graphqlade.ts";
+import { join, normalize, isAbsolute } from "../../imports/path.ts";
+import { toArraySync, randomId } from "./utils.ts";
+import type { FileSystemLike, FsEvent, WalkEntry } from "./fs.ts";
+import type { WatchEvent, WatcherOptions } from "./types.ts";
 
 /**
  * Based on an `AsyncIterator` superset originally designed
@@ -140,7 +140,7 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
             else {
                 handledIds.splice(0, handledIds.length)
             }
-        }, 200);
+        }, 100);
 
         function notifyStart() {
             const { isFile, isDirectory, isSymlink } = iterator.fs.lstatSync(normalize(sourcePath))

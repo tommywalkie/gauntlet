@@ -1,8 +1,8 @@
-import { runDevServer } from '../../server.ts'
-import { defaultEmitter } from '../../emitter.ts'
-import * as esbuild from '../../../imports/esbuild.ts'
+import { runDevServer } from "../../server.ts";
+import { defaultEmitter } from "../../emitter.ts";
+import * as esbuild from "../../../imports/esbuild.ts";
 
-export async function dev(props: any) {
+export async function dev(_props: any) {
     try {
         const devServer = runDevServer({
             port: 8000,

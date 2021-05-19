@@ -1,13 +1,13 @@
-import { AsyncPushIterator } from '../../imports/graphqlade.ts'
-import { normalize } from '../../imports/path.ts'
-import { EventEmitter } from '../../imports/deno_events.ts';
-import { randomId, toTypedArray } from './utils.ts'
+import { AsyncPushIterator } from "../../imports/graphqlade.ts";
+import { normalize } from "../../imports/path.ts";
+import { EventEmitter } from "../../imports/deno_events.ts";
+import { randomId, toTypedArray } from "./utils.ts";
 import type {
     FileSystemLike,
     FileEvents,
     FsEvent,
     WalkEntry
-} from './types.ts'
+} from "./types.ts";
 
 /**
  * Virtual filesystem inspired from
