@@ -1,16 +1,16 @@
 import {
   AsyncPushIterator,
   AsyncPushIteratorSetup,
-} from "../imports/graphqlade.ts";
-import { EventEmitter } from "../imports/deno_events.ts";
-import { Compiler, CompilerEvent, setupCompiler } from "./core/compiler.ts";
-import { HTTPOptions, serve, Server } from "../imports/std.ts";
-import { FileWatcher, watchFs } from "./core/watcher.ts";
+} from "../../imports/graphqlade.ts";
+import { EventEmitter } from "../../imports/deno_events.ts";
+import { HTTPOptions, serve, Server } from "../../imports/std.ts";
+import { default as esbuild } from "../../imports/esbuild.ts";
+import { FileWatcher, watchFs } from "../core/watcher.ts";
+import { Compiler, CompilerEvent, setupCompiler } from "../core/compiler.ts";
 import { DenoFileSystem } from "./utils.ts";
-import { default as esbuild } from "../imports/esbuild.ts";
-import type { WatchEvent } from "./core/types.ts";
+import type { WatchEvent } from "../core/types.ts";
 import type { DevServerEvents } from "./types.ts";
-import type { EsbuildInstance } from "../imports/esbuild.ts";
+import type { EsbuildInstance } from "../../imports/esbuild.ts";
 
 type DevServerSetup<T> = (
   iterator: DevServer<T>,
@@ -106,7 +106,7 @@ export function runDevServer(options: DevServerOptions = {
       // Deno.signal is not yet implemented on Windows.
       // https://github.com/denoland/deno/issues/9995
       if (Deno.build.os === "windows") {
-        const { setHandler } = await import("../imports/ctrlc.ts");
+        const { setHandler } = await import("../../imports/ctrlc.ts");
         setHandler(() => {
           if (eventSource) {
             eventSource.emit("debug", "Intercepted SIGINT signal");

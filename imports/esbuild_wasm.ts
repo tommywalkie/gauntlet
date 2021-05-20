@@ -1,10 +1,10 @@
-// @deno-types="https://cdn.jsdelivr.net/npm/esbuild-wasm@0.9.3/esm/browser.d.ts"
-import * as esbuildWasm from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.9.3/esm/browser.min.js";
+// @deno-types="https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.1/esm/browser.d.ts"
+import * as esbuildWasm from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.1/esm/browser.min.js";
 import type {
   TransformFailure,
   TransformOptions,
   TransformResult,
-} from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.9.3/esm/browser.d.ts";
+} from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.1/esm/browser.d.ts";
 
 let ___READY = false;
 
@@ -32,7 +32,7 @@ export async function initialize() {
   if (___READY) return;
   return await esbuildWasm.initialize({
     worker: false,
-    wasmURL: "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.9.3/esbuild.wasm",
+    wasmURL: "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.1/esbuild.wasm",
   }).then(() => ___READY = true);
 }
 

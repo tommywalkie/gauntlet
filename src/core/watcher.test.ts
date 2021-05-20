@@ -1,7 +1,7 @@
 import { expect, it } from "../../imports/expect.ts";
 import { copySync, moveSync } from "../../imports/std.ts";
 import { join } from "../../imports/path.ts";
-import { DenoFileSystem as fs } from "../utils.ts";
+import { DenoFileSystem as fs } from "../server/utils.ts";
 import { FileWatcher, watchFs } from "./watcher.ts";
 import { randomId } from "./utils.ts";
 import { WatchEvent } from "./types.ts";

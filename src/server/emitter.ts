@@ -1,7 +1,15 @@
-import { EventEmitter } from "../imports/deno_events.ts";
-import { blue, bold, cyan, gray, green, red, yellow } from "../imports/std.ts";
-import { normalize } from "../imports/path.ts";
-import { WalkEntry } from "./core/fs.ts";
+import { EventEmitter } from "../../imports/deno_events.ts";
+import {
+  blue,
+  bold,
+  cyan,
+  gray,
+  green,
+  red,
+  yellow,
+} from "../../imports/std.ts";
+import { normalize } from "../../imports/path.ts";
+import { WalkEntry } from "../core/fs.ts";
 import type { DevServerEvents } from "./types.ts";
 
 const DEBUG_PREFIX = `${gray("[")}${bold(blue("DEBUG"))}${gray("] —")}`;

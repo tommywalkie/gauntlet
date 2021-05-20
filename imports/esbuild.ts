@@ -1,15 +1,15 @@
-// @deno-types="https://deno.land/x/esbuild@v0.12.0/mod.d.ts"
+// @deno-types="https://deno.land/x/esbuild@v0.12.1/mod.d.ts"
 import {
   initialize,
   stop,
   transform,
-} from "https://deno.land/x/esbuild@v0.12.0/mod.js";
+} from "https://deno.land/x/esbuild@v0.12.1/mod.js";
 import type {
   InitializeOptions,
   TransformFailure,
   TransformOptions,
   TransformResult,
-} from "https://deno.land/x/esbuild@v0.12.0/mod.d.ts";
+} from "https://deno.land/x/esbuild@v0.12.1/mod.d.ts";
 
 export interface EsbuildInstance {
   initialize(options: InitializeOptions): Promise<void>;

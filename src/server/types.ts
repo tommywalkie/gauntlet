@@ -1,5 +1,5 @@
-import * as coreTypes from "./core/types.ts";
-import type { ServerRequest } from "../imports/std.ts";
+import * as coreTypes from "../core/types.ts";
+import type { ServerRequest } from "../../imports/std.ts";
 
 export interface DevServerEvents
   extends coreTypes.LogEvents, coreTypes.WatchEvents {

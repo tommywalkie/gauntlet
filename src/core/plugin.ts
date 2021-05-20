@@ -24,7 +24,7 @@ export type OnFileChangeProps = Pick<PluginLoadOptions, "filePath">;
 // Copyright 2019 Fred K. Schott. All rights reserved. MIT license.
 export interface PluginTransformOptions {
   id: string;
-  contents: string | Buffer;
+  contents: string | Partial<Buffer>;
 }
 
 // Copyright 2019 Fred K. Schott. All rights reserved. MIT license.
@@ -34,7 +34,7 @@ export interface PluginOptimizeOptions {
 
 // Copyright 2019 Fred K. Schott. All rights reserved. MIT license.
 export type PluginBuildResult = {
-  code: string | Buffer;
+  code: string | Partial<Buffer>;
   map?: string;
 };
 
@@ -123,7 +123,10 @@ export interface SnowpackConfig {
   alias: Record<string, string>;
   plugins: SnowpackPlugin[];
   devOptions: {
-    secure: boolean | { cert: string | Buffer; key: string | Buffer };
+    secure: boolean | {
+      cert: string | Partial<Buffer>;
+      key: string | Partial<Buffer>;
+    };
     hostname: string;
     port: number;
     openUrl?: string;

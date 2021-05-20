@@ -7,7 +7,6 @@ import {
   AsyncPushIteratorSetup,
 } from "../../imports/graphqlade.ts";
 import { isAbsolute, join } from "../../imports/path.ts";
-import type { SnowpackPlugin } from "./plugin.ts";
 
 export interface CompilerEvent {
   kind: string;

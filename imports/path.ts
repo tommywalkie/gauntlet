@@ -4,4 +4,4 @@ export {
   isAbsolute,
   join,
   normalize,
-} from "https://deno.land/std@0.96.0/path/mod.ts";
+} from "https://deno.land/std@0.97.0/path/mod.ts";

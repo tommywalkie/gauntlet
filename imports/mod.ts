@@ -3,7 +3,8 @@
 export * from "./buffer.ts";
 export * from "./ctrlc.ts";
 export * from "./deno_events.ts";
-export * from "./esbuild.ts";
+export * as esbuild from "./esbuild.ts";
+export * as esbuildWasm from "./esbuild_wasm.ts";
 export * from "./expect.ts";
 export * from "./graphqlade.ts";
 export * from "./path.ts";
