@@ -1,4 +1,4 @@
-import { EventEmitter } from "../../imports/deno_events.ts";
+import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
 import {
   blue,
   bold,
@@ -92,7 +92,7 @@ emitter.on(
 
 emitter.on(
   "listen",
-  async ({ hostname, port, secure }) =>
+  ({ hostname, port, secure }) =>
     logger.success(`Listening on: ${
       cyan(
         (secure ? "https://" : "http://") +

@@ -1,16 +1,16 @@
-import { blue, cyan, format, gray, green, yellow } from "../../imports/std.ts";
-import { manifest } from "./manifest.ts";
-import type { Command, Flag, Option } from "./types.ts";
+// deno-lint-ignore-file
 
-export const LICENSE = `Copyright ${format(new Date(), "yyyy")} Tom Bazarnik
-Licensed under Apache License, Version 2.0.`;
-
-export const VERSION = `${manifest.name} ${yellow("v" + manifest.version)}`;
+import { blue, cyan, gray, green, yellow } from "../../imports/std.ts";
+import type { Flag, Option, Program } from "./types.ts";
 
 const NEXT_LINE_ALINEA = "\n   ";
 
-function render(usageExamples: string[], optionsGuide: string[]) {
-  return `${VERSION}
+function render(
+  program: Program,
+  usageExamples: string[],
+  optionsGuide: string[],
+) {
+  return `${program._name} ${yellow("v" + program._version)}
 
 Usage:
    ${usageExamples.join(NEXT_LINE_ALINEA)}
@@ -18,49 +18,41 @@ Usage:
 Options:
    ${optionsGuide.join(NEXT_LINE_ALINEA)}
 
-${LICENSE}`;
-}
-
-// TODO
-function _renderCommand(commandsObj: any, maxCmdLen: number, command: string) {
-  const { alias, description } = commandsObj[command];
-  const example = alias +
-    new Array(maxCmdLen - alias.length).join("");
-  return `${manifest.name} ${example}  ${description}`;
+${program._copyright}`;
 }
 
 export function docopt(
-  commands: Command[],
-  options: Record<string, Option>[],
-  flags: Record<string, Flag>[],
+  program: Program,
 ) {
-  const commandsObj = Object.assign({ ...commands });
+  const commandsObj = Object.assign({ ...program.commands });
   const maxCmdLen = Math.max(
-    ...(Object.keys(Object.assign({ ...commands }))
+    ...(Object.keys(Object.assign({ ...program.commands }))
       .map((el) => commandsObj[el].alias.length) as number[]),
   );
   const maxOptLen = Math.max(
-    ...(Object.keys({ ...options, ...flags }).map((command) =>
-      ({ ...options, ...flags } as any)[command].aliases
+    ...(Object.keys({ ...program.options, ...program.flags }).map((command) =>
+      ({ ...program.options, ...program.flags } as any)[command].aliases
         .join(", ").length
     )),
   );
-  const usageExamples = Object.keys({ ...commands }).map((command) => {
+  const usageExamples = Object.keys({ ...program.commands }).map((command) => {
     const { alias, description } = commandsObj[command];
     const example = green(alias) +
       Array.from(Array(maxCmdLen - alias.length).keys()).map((_) => " ").join(
         "",
       );
-    return `${manifest.name} ${example}  ${gray(description)}`;
+    return `${program._name} ${example}  ${gray(description)}`;
   });
   const optionsGuide = Array.from(
     new Set(
-      Object.keys({ ...options, ...flags }).map((entry) => {
+      Object.keys({ ...program.options, ...program.flags }).map((entry) => {
         const { aliases, description, defaultValue }: Option | Flag =
-          (Object.assign({}, { ...options, ...flags }) as any)[entry];
+          (Object.assign({}, { ...program.options, ...program.flags }) as any)[
+            entry
+          ];
         const __flags = aliases.join(", ");
-        const colored_flags = aliases.map((el) => cyan(el)).join(", ");
-        const optionDisplay = colored_flags +
+        const coloredFlags = aliases.map((el) => cyan(el)).join(", ");
+        const optionDisplay = coloredFlags +
           Array.from(Array(maxOptLen - __flags.length).keys()).map((_) => " ")
             .join("");
         return `${optionDisplay}  ${gray(description)} ${
@@ -69,5 +61,5 @@ export function docopt(
       }),
     ),
   );
-  return render(usageExamples, optionsGuide);
+  return render(program, usageExamples, optionsGuide);
 }

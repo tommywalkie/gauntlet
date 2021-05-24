@@ -1,3 +1,5 @@
+// deno-lint-ignore-file no-explicit-any
+
 /**
  * Naive unique ID generator
  */
@@ -41,6 +43,11 @@ export function toTypedArray(s: string): Uint8Array {
 
 export function isDeno() {
   return (globalThis as any)?.Deno != null;
+}
+
+export function isBrowser() {
+  if (isDeno()) return false;
+  return (globalThis as any).navigator;
 }
 
 export function getOS() {

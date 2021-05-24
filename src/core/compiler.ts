@@ -1,12 +1,15 @@
-import { WatchEvent } from "./types.ts";
+// deno-lint-ignore-file
+
 import { FileWatcher } from "./watcher.ts";
+import { VirtualFileSystem } from "./fs.ts";
 import { toArraySync } from "./utils.ts";
-import { EventEmitter } from "../../imports/deno_events.ts";
+import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
 import {
   AsyncPushIterator,
   AsyncPushIteratorSetup,
 } from "../../imports/graphqlade.ts";
 import { isAbsolute, join } from "../../imports/path.ts";
+import type { WatchEvents } from "./types.ts";
 
 export interface CompilerEvent {
   kind: string;
@@ -20,19 +23,20 @@ export interface CompilerEntry {
   output?: string;
 }
 
-export class Compiler<T = CompilerEvent> extends AsyncPushIterator<T> {
+export class Compiler extends AsyncPushIterator<CompilerEvent> {
   entries: Map<string, CompilerEntry> = new Map();
+  fs: VirtualFileSystem = new VirtualFileSystem();
   plugins: any[] = [];
-  watchers: FileWatcher<WatchEvent>[] = [];
+  watchers: FileWatcher[] = [];
 
-  constructor(setup: (iterator: Compiler<T>) => void) {
-    super(setup as AsyncPushIteratorSetup<T>);
+  constructor(setup: (iterator: Compiler) => void) {
+    super(setup as AsyncPushIteratorSetup<CompilerEvent>);
   }
 }
 
 export interface CompilerOptions {
-  watchers: FileWatcher<WatchEvent>[];
-  eventSource?: EventEmitter<any>;
+  watchers: FileWatcher[];
+  eventSource?: EventEmitter<WatchEvents>;
   onError?: (err: Error) => void;
 }
 
@@ -67,7 +71,7 @@ export function setupCompiler(options: CompilerOptions) {
     const sourcePath = isAbsolute(watcher.mount)
       ? watcher.mount
       : join(watcher.fs.cwd(), watcher.mount);
-    let contents = toArraySync(watcher.fs.walkSync(sourcePath));
+    const contents = toArraySync(watcher.fs.walkSync(sourcePath));
     for (let index = 0; index < contents.length; index++) {
       const element = contents[index];
       if (element.isFile) {
@@ -90,7 +94,7 @@ export function setupCompiler(options: CompilerOptions) {
   }
 
   // The actual compiler event iterator
-  return new Compiler<CompilerEvent>((iterator: Compiler) => {
+  return new Compiler((iterator: Compiler) => {
     iterator.entries = initialMap;
     for (let index = 0; index < options.watchers.length; index++) {
       const watcher = options.watchers[index];

@@ -1,3 +1,4 @@
 export * from "./types.ts";
 export { defaultEmitter } from "./emitter.ts";
-export { runDevServer } from "./server.ts";
+export * from "./dev.ts";
+export * from "./utils.ts";

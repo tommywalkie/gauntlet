@@ -1,10 +1,12 @@
+// deno-lint-ignore-file no-explicit-any
 import { AsyncPushIterator } from "../../imports/graphqlade.ts";
-import { normalize } from "../../imports/path.ts";
-import { EventEmitter } from "../../imports/deno_events.ts";
+import { isAbsolute, join, normalize } from "../../imports/path.ts";
+import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
 import { randomId, toTypedArray } from "./utils.ts";
 import type {
   FileSystemLike,
   FsEvent,
+  FsEventKind,
   WalkEntry,
   WatchEvents,
 } from "./types.ts";
@@ -12,26 +14,52 @@ import type {
 /**
  * Virtual filesystem inspired from
  * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs),
- * using `EventEmitter` instead of `rxjs`'s `BehaviourSubject`.
+ * using type-safe `EventEmitter` implementation from `pietile-eventemitter`
  */
-export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
-  implements FileSystemLike {
-  cwd = () => "/";
+export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents> {
   private contents = new Map<string, T>();
+  private CWD = "/";
 
-  get size() {
+  get size(): number {
     return this.contents.size;
   }
 
+  cwd(): string {
+    return this.CWD;
+  }
+
+  setCwd(path: string): void {
+    path = this.parsePath(path);
+    this.CWD = path;
+  }
+
   private getEntryFrom(path: string) {
+    const stats = this.lstatSync(path);
     return {
       name: path.replace(/^.*[\\\/]/, ""),
       path: path,
-      ...this.lstatSync(path),
+      ...stats,
     };
   }
 
-  add(path: string, value?: any): VirtualFileSystem<T> {
+  private parsePath(path: string | URL) {
+    const res = path instanceof URL
+      ? normalize(path.toString())
+      : normalize(path);
+    return isAbsolute(res) ? res : join(this.CWD, res);
+  }
+
+  private tryReadFile(path: string | URL) {
+    path = this.parsePath(path);
+    if (this.getChildPaths(path).length > 0) {
+      throw new Error(`Cannot read directory "${path}" as a file.`);
+    }
+    const res = this.contents.get(path);
+    if (res) return res;
+    throw new Error(`File "${path}" not found.`);
+  }
+
+  add(path: string, value?: T): VirtualFileSystem<T> {
     let walkEntry, _exists = false;
     const nPath = normalize(path);
     if (this.existsSync(nPath)) {
@@ -46,7 +74,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
         isSymlink: false,
       };
     }
-    this.contents.set(nPath, value);
+    this.contents.set(nPath, value as T);
     if (_exists) {
       this.emit("modify", walkEntry);
     } else {
@@ -55,7 +83,13 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
     return this;
   }
 
-  remove(path: string): VirtualFileSystem<T> {
+  remove(path: string): Promise<VirtualFileSystem<T>> {
+    path = this.parsePath(path);
+    return Promise.resolve(this.removeSync(path));
+  }
+
+  removeSync(path: string): VirtualFileSystem<T> {
+    path = this.parsePath(path);
     this.getPaths().forEach((p) => {
       if (p.startsWith(normalize(path))) {
         const walkEntry = this.getEntryFrom(normalize(p));
@@ -67,6 +101,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
   }
 
   move(path: string, moveTo: string): VirtualFileSystem<T> {
+    path = this.parsePath(path);
     const children = this.getChildPaths(path);
 
     if (this.contents.has(path)) {
@@ -76,20 +111,22 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
       this.emit("remove", walkEntry);
     }
 
-    children.forEach((p) => {
-      const parsed = p.split(path);
+    for (let index = 0; index < children.length; index++) {
+      const child = children[index];
+      const parsed = child.split(path);
       const walkEntry = this.getEntryFrom(path);
       const newPath = moveTo + parsed[parsed.length - 1];
+      const stats = this.lstatSync(path);
       const newWalkEntry = {
         name: parsed[parsed.length - 1],
         path: newPath,
-        ...this.lstatSync(path),
+        ...stats,
       };
-      this.contents.set(newPath, this.read(p) as T);
-      this.contents.delete(p);
+      this.contents.set(newPath, this.read(child) as T);
+      this.contents.delete(child);
       this.emit("remove", walkEntry);
       this.emit("create", newWalkEntry);
-    });
+    }
 
     return this;
   }
@@ -99,76 +136,124 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
     return this;
   }
 
-  read(path: string) {
+  read(path: string | URL) {
+    path = this.parsePath(path);
     return this.contents.get(path);
   }
 
-  mkdirSync(path: string | URL) {
-    this.add(String(path));
+  write(path: string | URL, value?: T) {
+    path = this.parsePath(path);
+    this.add(path, value);
+    return Promise.resolve();
   }
 
-  readFile(path: string) {
-    const res = this.contents.get(normalize(path));
-    if (res) {
+  writeSync(path: string | URL, value?: T) {
+    path = this.parsePath(path);
+    this.add(path, value);
+  }
+
+  mkdir(path: string | URL) {
+    path = this.parsePath(path);
+    this.add(path);
+    return Promise.resolve();
+  }
+
+  mkdirSync(path: string | URL) {
+    path = this.parsePath(path);
+    this.add(path);
+  }
+
+  readFile(path: string | URL) {
+    try {
+      const res = this.tryReadFile(path);
       return Promise.resolve(toTypedArray(String(res)));
+    } catch (e) {
+      return Promise.reject(e);
     }
-    return Promise.reject(`File "${path}" not found.`);
   }
 
   readFileSync(path: string | URL) {
-    const res = this.contents.get(normalize(String(path)));
-    if (res) return toTypedArray(String(res));
-    throw new Error(`File "${path}" not found.`);
+    const res = this.tryReadFile(path);
+    return toTypedArray(String(res));
+  }
+
+  readTextFileSync(path: string | URL): string {
+    const res = this.tryReadFile(path);
+    if (typeof res === "string") return res;
+    throw new Error(`Cannot read non-text file "${path}".`);
+  }
+
+  writeFile(path: string | URL, data: Uint8Array) {
+    try {
+      path = this.parsePath(path);
+      const str = new TextDecoder().decode(data);
+      this.add(path, str as unknown as T);
+      return Promise.resolve();
+    } catch (e) {
+      return Promise.reject(e);
+    }
   }
 
   writeFileSync(path: string | URL, data: Uint8Array) {
+    path = this.parsePath(path);
     const str = new TextDecoder().decode(data);
-    this.add(String(path), str);
+    this.add(path, str as unknown as T);
   }
 
-  exists(filePath: string) {
-    return this.contents.has(normalize(filePath))
+  writeTextFileSync(path: string | URL, data: string) {
+    path = this.parsePath(path);
+    this.add(path, data as unknown as T);
+  }
+
+  exists(path: string | URL) {
+    path = this.parsePath(path);
+    return this.contents.has(path)
       ? Promise.resolve(true)
       : Promise.resolve(false);
   }
 
-  existsSync(filePath: string) {
-    return this.contents.has(filePath);
+  existsSync(path: string | URL) {
+    path = this.parsePath(path);
+    return this.contents.has(path);
   }
 
-  lstat(filePath: string) {
-    if (this.read(normalize(filePath))) {
+  lstat(path: string | URL) {
+    path = this.parsePath(path);
+    if (this.read(path)) {
       return Promise.resolve({
         isFile: true,
         isDirectory: false,
         isSymlink: false,
       });
     }
-    if (this.getChildPaths(normalize(filePath))?.length > 0) {
+    if (this.getChildPaths(path).length > 0) {
       return Promise.resolve({
         isFile: false,
         isDirectory: true,
         isSymlink: false,
       });
     }
-    return Promise.reject(`Path "${filePath}" not found`);
+    return Promise.reject(`Path "${path}" not found`);
   }
 
-  lstatSync(filePath: string) {
-    if (this.read(filePath)) {
+  lstatSync(path: string | URL) {
+    path = this.parsePath(path);
+    if (this.read(path)) {
       return { isFile: true, isDirectory: false, isSymlink: false };
     }
-    if (this.getChildPaths(filePath)?.length > 0) {
+    if (this.getChildPaths(path).length > 0) {
       return { isFile: false, isDirectory: true, isSymlink: false };
     }
-    throw new Error(`Path "${filePath}" not found`);
+    throw new Error(`Path "${path}" not found`);
   }
 
-  walk(currentPath: string) {
-    const _this = this;
-    async function* createAsyncIterable(syncIterable: Array<any>) {
+  walk(currentPath: string | URL) {
+    currentPath = this.parsePath(currentPath);
+    // deno-lint-ignore no-this-alias
+    const self = this;
+    async function* createAsyncIterable(syncIterable: Array<string>) {
       for (const elem of syncIterable) {
-        const stats = await _this.lstat(elem);
+        const stats = await self.lstat(elem);
         const entry = {
           name: elem.replace(/^.*[\\\/]/, ""),
           path: elem,
@@ -177,14 +262,16 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
         yield entry;
       }
     }
-    return createAsyncIterable(this.getChildPaths(normalize(currentPath)));
+    return createAsyncIterable(this.getChildPaths(currentPath));
   }
 
-  walkSync(currentPath: string) {
-    const _this = this;
-    function* createAsyncIterable(syncIterable: Array<any>) {
+  walkSync(currentPath: string | URL) {
+    currentPath = this.parsePath(currentPath);
+    // deno-lint-ignore no-this-alias
+    const self = this;
+    function* createAsyncIterable(syncIterable: Array<string>) {
       for (const elem of syncIterable) {
-        const stats = _this.lstatSync(elem);
+        const stats = self.lstatSync(elem);
         const entry = {
           name: elem.replace(/^.*[\\\/]/, ""),
           path: elem,
@@ -193,56 +280,58 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
         yield entry;
       }
     }
-    return createAsyncIterable(this.getChildPaths(normalize(currentPath)));
+    return createAsyncIterable(this.getChildPaths(currentPath));
   }
 
   watch(paths: string | string[]): AsyncPushIterator<FsEvent> {
     let events: Array<FsEvent & { _id: string }> = [];
+    if (!Array.isArray(paths)) {
+      paths = [paths];
+    }
     return new AsyncPushIterator<FsEvent>((it) => {
       const intervalId = setInterval(() => {
         if (events.length > 0) {
           for (let index = 0; index < events.length; index++) {
             const event = events[index];
+            const eventPath = event.paths[0];
             events = events.filter((el) => el._id !== event._id);
-            if (typeof paths === "string") {
-              // In case 'paths' is string
-              if (event.paths[0].startsWith(normalize(paths))) {
+            for (let i = 0; i < paths.length; i++) {
+              if (eventPath.startsWith(normalize(paths[i]))) {
                 it.push(event);
               }
-            } else if (paths.length > 0) {
-              // In case 'paths' is string[]
-              for (let index = 0; index < paths.length; index++) {
-                const path = normalize(paths[index]);
-                if (event.paths[0].startsWith(path)) {
-                  it.push(event);
-                }
-              }
-            } else {
-              it.push(event);
             }
           }
         }
       }, 50);
 
-      type AcceptedEvents = "create" | "modify" | "remove";
-      const possibleEvents: Array<AcceptedEvents> = [
+      const possibleEvents: Array<FsEventKind> = [
         "create",
         "modify",
         "remove",
       ];
+
+      // Register listeners, in order to terminate them later
+      const listeners = new Map<FsEventKind, (path: WalkEntry) => void>();
       for (let index = 0; index < possibleEvents.length; index++) {
         const possibleEvent = possibleEvents[index];
-        this.on(possibleEvent, (entry: WalkEntry) => {
-          events.push({
-            _id: randomId(),
-            kind: possibleEvent,
-            paths: [entry.path],
-          });
-        });
+        listeners.set(
+          possibleEvent,
+          this.on(possibleEvent, (entry: WalkEntry) => {
+            events.push({
+              _id: randomId(),
+              kind: possibleEvent,
+              paths: [entry.path],
+            });
+          }),
+        );
       }
 
       return () => {
         clearInterval(intervalId);
+        // Safely terminate related listeners
+        listeners.forEach((value, key) => {
+          this.off(key, value);
+        });
       };
     });
   }
@@ -265,9 +354,8 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
 
   getChildNames(path: string): string[] {
     return this.getChildPaths(path)
-      .map((fullPath) => fullPath.split(path)[1].split("/")[1]) // Find the first child
+      .map((fullPath) => fullPath.split(path)[1].split("/")[1])
       .reduce((final: string[], pathRef) => {
-        // Dedupe the list
         if (final.indexOf(pathRef) <= -1) {
           final.push(pathRef);
         }
@@ -275,8 +363,10 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
       }, []);
   }
 
-  map<R>(fn: (res: T, path: string) => string): VirtualFileSystem<R> {
-    const res = new VirtualFileSystem();
+  map<R = T>(
+    fn: (res: T, path: string) => R,
+  ): VirtualFileSystem<R> {
+    const res = new VirtualFileSystem<R>();
     this.contents.forEach((item, key) => {
       res.add(key, fn(item, key));
     });
@@ -284,7 +374,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
   }
 
   filter(fn: (res: T, path: string) => boolean): VirtualFileSystem<T> {
-    const res = new VirtualFileSystem();
+    const res = new VirtualFileSystem<T>();
     this.contents.forEach((item, key) => {
       if (fn(item, key)) {
         res.add(key, item);
@@ -299,8 +389,10 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents>
  * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs)'s `VirtualFileSystem<T>` class,
  * plus `FileSystemLike` bindings including `lstat`, `walk`, `exists`, etc.
  */
-export function createVirtualFileSystem(): VirtualFileSystem {
-  return new VirtualFileSystem();
+export function createVirtualFileSystem<T = any>(): VirtualFileSystem<T> {
+  return new VirtualFileSystem<T>();
 }
+
+createVirtualFileSystem();
 
 export type { FileSystemLike, FsEvent, WalkEntry };

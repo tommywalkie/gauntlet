@@ -5,9 +5,7 @@ export const DenoFileSystem: FileSystemLike = {
   cwd: () => Deno.cwd(),
   existsSync,
   lstatSync: Deno.lstatSync,
-  mkdirSync: Deno.mkdirSync,
   readFileSync: Deno.readFileSync,
   walkSync,
   watch: Deno.watchFs,
-  writeFileSync: Deno.writeFileSync,
 };

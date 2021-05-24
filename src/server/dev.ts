@@ -1,15 +1,16 @@
+// deno-lint-ignore-file no-explicit-any
+
 import {
   AsyncPushIterator,
   AsyncPushIteratorSetup,
 } from "../../imports/graphqlade.ts";
-import { EventEmitter } from "../../imports/deno_events.ts";
+import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
 import { HTTPOptions, serve, Server } from "../../imports/std.ts";
 import { default as esbuild } from "../../imports/esbuild.ts";
 import { FileWatcher, watchFs } from "../core/watcher.ts";
 import { Compiler, CompilerEvent, setupCompiler } from "../core/compiler.ts";
 import { DenoFileSystem } from "./utils.ts";
-import type { WatchEvent } from "../core/types.ts";
-import type { DevServerEvents } from "./types.ts";
+import type { DevServerEvents, Disposable } from "./types.ts";
 import type { EsbuildInstance } from "../../imports/esbuild.ts";
 
 type DevServerSetup<T> = (
@@ -30,8 +31,6 @@ export interface DevServerOptions {
   mounts: string[];
   eventSource?: EventEmitter<DevServerEvents>;
 }
-
-type Disposable<T> = [T, (props?: any) => void];
 
 function initServer(addr: string | HTTPOptions): Disposable<Server> {
   const options = typeof addr === "string"
@@ -57,9 +56,9 @@ function initESBuild(
 function initCompiler(
   mounts: string[],
   eventSource?: EventEmitter<DevServerEvents>,
-  onError?: (props?: any) => void,
+  onError?: (err: Error) => void,
 ): Disposable<Compiler> {
-  let watchers: FileWatcher<WatchEvent>[] = [];
+  let watchers: FileWatcher[] = [];
   try {
     watchers = mounts.map((mount) => {
       return watchFs({ source: mount, fs: DenoFileSystem });
@@ -88,7 +87,7 @@ export function runDevServer(options: DevServerOptions = {
     const [server, disposeServer] = initServer({ port: options.port });
     const [_esbuildInstance, disposeEsbuild] = initESBuild(eventSource);
 
-    function terminate(err?: Error) {
+    const terminate = (err?: Error) => {
       if (err && eventSource) {
         eventSource.emit("error", `${err.name}: ${err.message}`);
       }
@@ -100,9 +99,9 @@ export function runDevServer(options: DevServerOptions = {
       disposeServer();
       if (eventSource) eventSource.emit("terminate");
       Deno.exit(1);
-    }
+    };
 
-    async function gracefulExit() {
+    const gracefulExit = async () => {
       // Deno.signal is not yet implemented on Windows.
       // https://github.com/denoland/deno/issues/9995
       if (Deno.build.os === "windows") {
@@ -122,7 +121,7 @@ export function runDevServer(options: DevServerOptions = {
           terminate();
         }
       }
-    }
+    };
 
     return new DevServer<CompilerEvent | { kind: string; details: any }>(
       (iterator) => {

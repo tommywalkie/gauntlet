@@ -1,5 +1,7 @@
-import { docopt, LICENSE, VERSION } from "./docopt.ts";
-import { manifest } from "./manifest.ts";
+// deno-lint-ignore-file
+
+import { docopt } from "./docopt.ts";
+import { format, yellow } from "../../imports/std.ts";
 
 import type {
   Callback,
@@ -36,7 +38,22 @@ export class ProgramInstance implements Program {
   commands: Array<Command> = [];
   flags: Record<string, Flag>[] = [];
   options: Record<string, Option>[] = [];
+  _version: string = "0.0.0";
+  _name: string = "<my-cli>";
+  _copyright: string = `Copyright ${format(new Date(), "yyyy")} <author>`;
   private __fallback: Callback = async (inputs: any) => this.help(inputs);
+  version(v: string) {
+    this._version = v;
+    return this;
+  }
+  name(n: string) {
+    this._name = n;
+    return this;
+  }
+  copyright(c: string) {
+    this._copyright = c;
+    return this;
+  }
   flag(
     aliases: SingleOrPair<string>,
     description: string = "",
@@ -79,10 +96,10 @@ export class ProgramInstance implements Program {
     return this;
   }
   help(parsed: Context) {
-    console.log(docopt(this.commands, this.options, this.flags));
+    console.log(docopt(this));
   }
   parse = (
-    args: string[] = [...Deno.args],
+    args: string[] = [],
   ): Context => {
     let options: Record<string, Input> = {};
     let values: string[] = [];
@@ -132,14 +149,15 @@ export class ProgramInstance implements Program {
         values.push(arg);
       }
     });
-    return { commands, options, values };
+    return { instance: this, commands, options, values };
   };
   public fallback(callback: Callback) {
     this.__fallback = callback;
     return this;
   }
-  run = async () => {
-    const { commands, options, values } = this.parse();
+  run(args: string[]) {
+    const _this = this;
+    const { commands, options, values } = this.parse(args);
 
     // Uncomment this, for CLI input debuggging
     // console.log({commands, options, values})
@@ -148,26 +166,28 @@ export class ProgramInstance implements Program {
       Object.keys(options).includes("version") ||
       Object.keys(options).includes("v")
     ) {
-      console.log(`${VERSION}\n${LICENSE}`);
+      console.log(
+        `${this._name} ${yellow("v" + this._version)}\n${this._copyright}`,
+      );
     } else if (
       Object.keys(options).includes("help") ||
       Object.keys(options).includes("h")
     ) {
-      this.help({ commands, options, values });
+      this.help({ instance: _this, commands, options, values });
     } else if (commands.length) {
-      await this.commands[(commands as any)[0]].callback({
-        manifest,
+      this.commands[(commands as any)[0]].callback({
+        instance: _this,
         options,
         values,
       });
     } else {
-      await this.__fallback({
-        manifest,
+      this.__fallback({
+        instance: _this,
         options,
         values,
       });
     }
-  };
+  }
 }
 
 export function setupProgram() {

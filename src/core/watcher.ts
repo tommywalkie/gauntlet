@@ -13,17 +13,20 @@ import type { WatcherOptions, WatchEvent } from "./types.ts";
  * to wrap asynchronously pushed events by the provided filesystem `<FileSystemLike>.watch`
  * while .
  */
-export class FileWatcher<T> extends AsyncPushIterator<T> {
+export class FileWatcher extends AsyncPushIterator<WatchEvent> {
   fs: FileSystemLike;
+  /**
+   * @todo Refactor into a `Map` or something more efficient
+   */
   contents: WalkEntry[] = [];
   mount: string;
 
   constructor(
-    setup: (iterator: FileWatcher<T>) => void,
+    setup: (iterator: FileWatcher) => void,
     fs: FileSystemLike,
     mount: string,
   ) {
-    super(setup as AsyncPushIteratorSetup<T>);
+    super(setup as AsyncPushIteratorSetup<WatchEvent>);
     this.fs = fs;
     this.mount = normalize(mount);
   }
@@ -35,11 +38,10 @@ function diff(a: WalkEntry[], b: WalkEntry[]) {
 
 function processNotFoundMountErrorArgs(
   literralEntry: string,
-  mount: string,
   cwd: string,
 ) {
   const explanation = isAbsolute(literralEntry)
-    ? `"${literralEntry}" is an absolute path, check your filesystem or consider using ".${literralEntry}" instead.`
+    ? `"${literralEntry}" looks like an absolute path, check your filesystem or consider using ".${literralEntry}" instead.`
     : `"${literralEntry}" doesn't exist in current working directory "${cwd}".`;
   return `Cannot init file watcher. Mount directory not found.
   ${explanation}`;
@@ -47,21 +49,21 @@ function processNotFoundMountErrorArgs(
 
 export class NotFoundMountError extends Error {
   name = "NotFoundMountError";
-  constructor(literralEntry: string, mount: string, cwd: string) {
-    super(processNotFoundMountErrorArgs(literralEntry, mount, cwd));
+  constructor(literralEntry: string, cwd: string) {
+    super(processNotFoundMountErrorArgs(literralEntry, cwd));
     Object.setPrototypeOf(this, NotFoundMountError.prototype);
   }
 }
 
-export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
+export function watchFs(options: WatcherOptions): FileWatcher {
   const sourcePath = isAbsolute(options.source)
     ? options.source
     : join(options.fs.cwd(), options.source);
   if (!options.fs.existsSync(sourcePath)) {
-    throw new NotFoundMountError(options.source, sourcePath, options.fs.cwd());
+    throw new NotFoundMountError(options.source, options.fs.cwd());
   }
-  return new FileWatcher<WatchEvent>(
-    (iterator: FileWatcher<WatchEvent>) => {
+  return new FileWatcher(
+    (iterator: FileWatcher) => {
       let events: Array<WatchEvent & { _id: string }> = [];
       const watcher = iterator.fs.watch(sourcePath);
       const srcIterator: IterableIterator<WalkEntry> = iterator.fs.walkSync(
@@ -72,6 +74,16 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
         return normalize(str).substring(sourcePath.length + 1);
       }
 
+      /**
+       * Performs a full walk of the source directory
+       * and update registered contents, and emit events
+       * for entries who got removed or registered.
+       *
+       * This **resource consuming** method shall be used as little as possible,
+       * only for unobvious `FsEvent` events, like the ones for directories.
+       *
+       * @todo Consider removing possibly unnecessary spreads
+       */
       function refreshSource() {
         const snapshot = [...new Set([...iterator.contents])];
         const srcIterator = iterator.fs.walkSync(normalize(sourcePath));
@@ -99,23 +111,41 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
         }
       }
 
+      /**
+       * Process and filter `FsEvent` events,
+       * by performing checks and
+       *
+       * @todo Consider optimizing folder deletion event handling.
+       * In theory, folder deletion events happen after folder item deletion
+       * events, AT LEAST when using Deno.watchFs.
+       * We can play safe and check if folder items really got deleted,
+       * though using refreshSource may be overkill.
+       */
       function handleEvent(event: FsEvent) {
         // We could listen to inotify events including two paths,
         // but due to the fact they happen after many related modify events,
         // they become noise.
         if (event.paths.length === 1) {
           const path = event.paths[0];
-          const entry = iterator.contents.find(
-            (content: WalkEntry) =>
-              content.path === join(sourcePath, format(path)),
-          );
 
-          if (event.kind === "create") {
+          const getRegisteredEntry = (path: string) => {
+            return iterator.contents.find(
+              (content: WalkEntry) =>
+                content.path === join(sourcePath, format(path)),
+            );
+          };
+
+          /**
+           * Try registering a new entry from given path,
+           * first by performing a stats check, which can throw
+           * if the file got immediatly removed just after being newly added.
+           */
+          const tryRegister = (path: string) => {
             try {
               const { isFile, isDirectory, isSymlink } = iterator.fs.lstatSync(
                 path,
               );
-              const new_entry = {
+              const newEntry = {
                 path: join(sourcePath, format(path)),
                 name: normalize(path).replace(/^.*[\\\/]/, ""),
                 isFile,
@@ -123,24 +153,43 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
                 isSymlink,
               };
               if (isFile) {
-                iterator.contents.push(new_entry);
+                iterator.contents.push(newEntry);
                 events.push({
                   _id: randomId(),
-                  kind: event.kind as any,
-                  entry: new_entry,
+                  kind: "create",
+                  entry: newEntry,
                 });
               } else if (isDirectory) refreshSource();
-            } catch (e) {}
+            } catch (e) {
+              throw e;
+            }
+          };
+
+          if (event.kind === "create") {
+            tryRegister(path);
           }
           if (event.kind === "modify") {
-            if (entry?.isFile) {
-              if (iterator.fs.existsSync(normalize(entry.path))) {
-                events.push({ _id: randomId(), kind: event.kind, entry });
-              } else refreshSource();
+            const entry = getRegisteredEntry(path);
+            if (!entry) {
+              // Most likely a newly renamed file
+              tryRegister(path);
+            } else {
+              if (entry?.isFile) {
+                if (iterator.fs.existsSync(normalize(entry.path))) {
+                  // These file/metadata change events may happen in groups,
+                  // especially when using GUIs, thus require being de-duplicated.
+                  events.push({ _id: randomId(), kind: event.kind, entry });
+                } else {
+                  // Most likely a file being renamed
+                  events.push({ _id: randomId(), kind: "remove", entry });
+                }
+              }
+              // Most likely a folder being moved or renamed
+              if (entry?.isDirectory) refreshSource();
             }
-            if (entry?.isDirectory) refreshSource();
           }
           if (event.kind === "remove") {
+            const entry = getRegisteredEntry(path);
             if (entry?.isFile) {
               iterator.contents = iterator.contents.filter(
                 (item: WalkEntry) =>
@@ -176,7 +225,7 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
         } else {
           handledIds.splice(0, handledIds.length);
         }
-      }, 100);
+      }, 200);
 
       function notifyStart() {
         const { isFile, isDirectory, isSymlink } = iterator.fs.lstatSync(
@@ -203,10 +252,10 @@ export function watchFs(options: WatcherOptions): FileWatcher<WatchEvent> {
       })();
 
       return () => {
+        // Clear the event poller
         clearInterval(pollEvents);
-        // Both the hereby watcher and the wrapped file watcher (iterator.fs.watch)
-        // shall be terminated. Otherwise, async ops may leak and Deno test will fail.
-        (watcher as any).return();
+        // Terminate the wrapped filesystem watcher
+        if (watcher.return) watcher.return();
       };
     },
     options.fs,

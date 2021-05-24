@@ -99,6 +99,7 @@ export interface OptimizeOptions {
 // Copyright 2019 Fred K. Schott. All rights reserved. MIT license.
 export interface RouteConfigObject {
   src: string;
+  // deno-lint-ignore no-explicit-any
   dest: string | ((req: any, res: any) => void);
   match: "routes" | "all";
   _srcRegex: RegExp;
@@ -160,6 +161,5 @@ export interface SnowpackConfig {
 
   optimize?: OptimizeOptions;
   routes: RouteConfigObject[];
-  experiments: {};
   _extensionMap: Record<string, string[]>;
 }

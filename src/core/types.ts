@@ -1,3 +1,5 @@
+// deno-lint-ignore-file no-explicit-any
+
 /**
  * File watching events interface, designed for the `EventEmitter<T>`
  * implementation from `deno_events`
@@ -22,17 +24,7 @@ export interface LogEvents {
   debug(description: string): void;
 }
 
-export interface Events {
-  modify(path: WalkEntry): void;
-  create(path: WalkEntry): void;
-  remove(path: WalkEntry): void;
-  watch(entry: WalkEntry): void;
-  fatal(description: string, error?: Error): void;
-  error(description: string, error?: Error): void;
-  warn(description: string): void;
-  info(description: string): void;
-  debug(description: string): void;
-}
+export interface Events extends LogEvents, WatchEvents {}
 
 /**
  * File watching event object
@@ -47,11 +39,21 @@ export interface WatcherOptions {
   fs: FileSystemLike;
 }
 
+export type FsEventKind = "create" | "modify" | "remove";
+
 /**
  * Base file watching event
  */
 export interface FsEvent {
-  kind: "create" | "modify" | "remove" | string;
+  kind: FsEventKind | string;
+  paths: string[];
+}
+
+/**
+ * Base file watching event
+ */
+export interface VirtualFileSystemEvent {
+  kind: FsEventKind | "rename";
   paths: string[];
 }
 
@@ -65,22 +67,16 @@ export interface WalkEntry {
 }
 
 /**
- * Base filesystem bindings for watchers
+ * Base filesystem bindings
  */
 export interface FileSystemLike {
   cwd: () => string;
   existsSync: (path: string) => boolean;
   lstatSync: (path: string) => Omit<Omit<WalkEntry, "name">, "path">;
-  mkdirSync: (path: string | URL, ...options: any | undefined) => void;
-  readFileSync: (path: string | URL) => Uint8Array;
   walkSync: (currentPath: string) => IterableIterator<WalkEntry>;
   watch: (
     paths: string | string[],
     ...options: any | undefined
   ) => AsyncIterableIterator<FsEvent>;
-  writeFileSync: (
-    path: string | URL,
-    data: Uint8Array,
-    ...options: any | undefined
-  ) => void;
+  readFileSync: (path: string | URL) => Uint8Array;
 }
