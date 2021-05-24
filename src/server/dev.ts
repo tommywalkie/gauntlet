@@ -10,6 +10,7 @@ import { default as esbuild } from "../../imports/esbuild.ts";
 import { FileWatcher, watchFs } from "../core/watcher.ts";
 import { Compiler, CompilerEvent, setupCompiler } from "../core/compiler.ts";
 import { DenoFileSystem } from "./utils.ts";
+import * as HMR from "./hmr.ts";
 import type { DevServerEvents, Disposable } from "./types.ts";
 import type { EsbuildInstance } from "../../imports/esbuild.ts";
 

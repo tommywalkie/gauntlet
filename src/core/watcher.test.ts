@@ -6,7 +6,6 @@ import { FileWatcher, watchFs } from "./watcher.ts";
 import { randomId } from "./utils.ts";
 import { WatchEvent } from "./types.ts";
 
-/*
 const testDir = join(Deno.cwd(), "__TEST__");
 if (existsSync(testDir)) {
   Deno.removeSync(testDir, { recursive: true });
@@ -169,4 +168,3 @@ it("should be able to track moved non-empty folders from outside the watching sc
   // console.log(events)
   expect(events.length).toBeGreaterThanOrEqual(1);
 });
-*/

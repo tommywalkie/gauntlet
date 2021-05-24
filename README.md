@@ -1,5 +1,6 @@
 <!-- deno-fmt-ignore-file -->
 <p align="center">
+  <img height="80" src="https://raw.githubusercontent.com/tommywalkie/gauntlet/main/.github/assets/logo.svg">
   <h1 align="center">Gauntlet</h1>
 </p>
 <p align="center">
@@ -18,19 +19,18 @@
 
 
 
-
 ## Overview
 
-Gauntlet is a _work-in-progress_ naive and fast ES Modules powered frontend tool based on Deno and ESBuild.
+Gauntlet is a _work-in-progress_ naive and fast ES Modules powered frontend tool based on ESBuild, intended for Deno or the browser.
 
 ## Goals
 
--  <img src="https://www.thecolorapi.com/id?hex=993366&format=svg&named=false&w=12&h=12">  _Very_ fast
--  <img src="https://www.thecolorapi.com/id?hex=00CCFF&format=svg&named=false&w=12&h=12">  Browser-compatible at the core, modularized codebase (no `deps.ts`)
--  <img src="https://www.thecolorapi.com/id?hex=339966&format=svg&named=false&w=12&h=12">  Discoverable
--  <img src="https://www.thecolorapi.com/id?hex=FFFF00&format=svg&named=false&w=12&h=12">  Subscribable, log and watch for _any_ event the way _you_ want
--  <img src="https://www.thecolorapi.com/id?hex=FF9900&format=svg&named=false&w=12&h=12">  Supports Snowpack plugins (**_planned!_**)
--  <img src="https://www.thecolorapi.com/id?hex=FF0000&format=svg&named=false&w=12&h=12">  Supports TypeScript and JSX via ESBuild
+-  <img src="https://www.thecolorapi.com/id?hex=993366&format=svg&named=false&w=12&h=12">  <!-- Power -->_Very_ fast
+-  <img src="https://www.thecolorapi.com/id?hex=00CCFF&format=svg&named=false&w=12&h=12">  <!-- Space -->Browser-compatible at the core, ESM bundles, no `deps.ts`
+-  <img src="https://www.thecolorapi.com/id?hex=339966&format=svg&named=false&w=12&h=12">  <!-- Time -->Hot module replacement support (**_planned!_**)
+-  <img src="https://www.thecolorapi.com/id?hex=FFFF00&format=svg&named=false&w=12&h=12">  <!-- Mind -->Subscribable, watchable, virtual filesystem support
+-  <img src="https://www.thecolorapi.com/id?hex=FF9900&format=svg&named=false&w=12&h=12">  <!-- Soul -->Dependency pre-bundling (**_planned!_**)
+-  <img src="https://www.thecolorapi.com/id?hex=FF0000&format=svg&named=false&w=12&h=12">  <!-- Reality -->Out-of-the-box TypeScript/JSX support, plus Snowpack plugins (**_planned!_**)
 
 ## Contributing
 
@@ -41,5 +41,7 @@ The **v1.0.0** roadmap is available in [Github Projects](https://github.com/tomm
 ## License
 
 Gauntlet is currently licensed under [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+Gauntlet logo is licensed under [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/).
 
 © Copyright 2021 Tom Bazarnik.
