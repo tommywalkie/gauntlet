@@ -160,8 +160,9 @@ export function watchFs(options: WatcherOptions): FileWatcher {
                   entry: newEntry,
                 });
               } else if (isDirectory) refreshSource();
-            } catch (e) {
-              throw e;
+            } catch (_e) {
+              // Do nothing here, most of the time, it will throw when
+              // looking at a removed/renamed file.
             }
           };
 
