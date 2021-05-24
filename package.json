@@ -1,7 +1,7 @@
 {
   "name": "@tommywalkie/gauntlet",
   "private": false,
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Core modules of Gauntlet, the next Deno-based browser-compatible development server",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

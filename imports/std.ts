@@ -11,10 +11,10 @@ export {
   moveSync,
   walkSync,
 } from "https://deno.land/std@0.97.0/fs/mod.ts";
-export { format } from "https://deno.land/std@0.96.0/datetime/mod.ts";
+export { format } from "https://deno.land/std@0.97.0/datetime/mod.ts";
 export {
   serve,
   Server,
   ServerRequest,
 } from "https://deno.land/std@0.97.0/http/server.ts";
-export type { HTTPOptions } from "https://deno.land/std@0.96.0/http/server.ts";
+export type { HTTPOptions } from "https://deno.land/std@0.97.0/http/server.ts";
