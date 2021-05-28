@@ -687,10 +687,12 @@ export function createVirtualFileSystem<T = any>(): FileSystem<T> {
   return new FileSystem<T>();
 }
 
-export { createVirtualFileSystem as createFileSystem }
+export {
+  createVirtualFileSystem as createFileSystem,
+  FileSystem as VirtualFileSystem,
+}
 
 export type {
-  FileSystem as VirtualFileSystem,
   FileSystemLike,
   FsEvent,
   WalkEntry,
