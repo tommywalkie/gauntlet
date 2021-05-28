@@ -11,276 +11,568 @@ import type {
   WatchEvents,
 } from "./types.ts";
 
+export interface Item<T = any> extends WalkEntry {
+  data?: T;
+}
+
+export interface Document<T = any> extends Item<T> {
+  data: T;
+  isFile: true;
+  isDirectory: false;
+}
+
+export interface Directory extends Item {
+  data: undefined;
+  isFile: false;
+  isDirectory: true;
+}
+
 /**
- * Virtual filesystem inspired from
- * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs),
- * using type-safe `EventEmitter` implementation from `pietile-eventemitter`
+ * Same as `String.prototype.replaceAll("\\", "/")`, except it has better
+ * compatibility.
  */
-export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents> {
-  private contents = new Map<string, T>();
-  private CWD = "/";
+export function replaceSlashes(str: string) {
+  return str.split(/\\/).join("/");
+}
+
+/**
+ * Same as [`std/path`](https://deno.land/std/path).`normalize`,
+ * except it replaces all `\` with `/`, and removes trailing slashes.
+ */
+export function format(path: string) {
+  const res = replaceSlashes(normalize(path));
+  return res.length > 1 && res[res.length - 1] === "/" ? res.substr(0, res.length - 1) : res;
+}
+
+export function dirname(entry: string) {
+  return entry.substr(
+    0,
+    entry.length - entry.replace(/^.*[\\\/]/, "").length - 1,
+  );
+}
+
+export interface PathItem {
+  path: string;
+  name: string;
+  index: number;
+}
+
+export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
+  protected root: string = "/";
+  protected CWD: string = this.root;
+  protected contents = new Map<string, Item<T>>();
 
   get size(): number {
     return this.contents.size;
+  }
+
+  /**
+   * Given an absolute path, split it and
+   * returns an iterator, for each folder.
+   * This utility doesn't check if these folders actually exist.
+   */
+  *traverse(givenPath: string): IterableIterator<PathItem> {
+    if (!isAbsolute(givenPath)) {
+      throw new Error("Cannot traverse a relative path.");
+    }
+    const iterator = givenPath.split("/");
+    let path = this.root;
+    for (const [index, name] of iterator.entries()) {
+      path = format(join(path, name));
+      yield { path, name, index };
+    }
+  }
+
+  resolve(p: string) {
+    p = format(p);
+    return isAbsolute(p) ? p : format(join(this.CWD, p));
   }
 
   cwd(): string {
     return this.CWD;
   }
 
-  setCwd(path: string): void {
-    path = this.parsePath(path);
-    this.CWD = path;
+  cd(path: string): void {
+    path = this.resolve(path);
+    if (path === "/") {
+      this.CWD = path;
+    }
+    else {
+      if (!this.existsSync(path)) {
+        throw new Error(
+          `Cannot use a non-existing "${path}" entry as current working directory.`,
+        );
+      }
+      if (this.lstatSync(path).isFile) {
+        throw new Error(
+          `Cannot use a file "${path}" as current working directory.`,
+        );
+      }
+      this.CWD = path;
+    }
   }
 
-  private getEntryFrom(path: string) {
-    const stats = this.lstatSync(path);
-    return {
-      name: path.replace(/^.*[\\\/]/, ""),
-      path: path,
-      ...stats,
+  /**
+   * Low-level path existence checking implementation,
+   * given path must be absolute.
+   * @private
+   */
+  private _exists(existingPath: string) {
+    return this.contents.has(existingPath);
+  }
+
+  existsSync(path: string) {
+    path = this.resolve(path);
+    return this._exists(path);
+  }
+
+  exists(path: string): Promise<boolean> {
+    try {
+      return Promise.resolve(this.existsSync(path));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  /**
+   * Low-level folder creation implementation, given path must be absolute
+   * and valid, implying all parent folders exist.
+   * @private
+   */
+  private _mkdir(existingPath: string) {
+    this.contents.set(existingPath, {
+      path: existingPath,
+      name: existingPath.replace(/^.*[\\\/]/, ""),
+      isFile: false,
+      isDirectory: true,
+      isSymlink: false,
+    } as Directory);
+  }
+
+  mkdirSync(givenPath: string) {
+    givenPath = this.resolve(givenPath);
+    if (this._exists(givenPath)) {
+      throw new Error("Cannot create directory, file already exists.");
+    }
+    if (givenPath === "/") {
+      throw new Error("Cannot override the root folder.");
+    }
+    const parentDirIndex = givenPath.split("/").length - 2;
+    for (const { path, index } of this.traverse(givenPath)) {
+      if (index <= parentDirIndex && path !== "/") {
+        if (this.contents.get(path)?.isFile) {
+          throw new Error("Cannot create folder under a file.");
+        }
+        if (!this._exists(path)) {
+          throw new Error("Cannot create folder inside a non-existing folder.");
+        }
+      }
+    }
+    this._mkdir(givenPath);
+  }
+
+  mkdir(givenPath: string) {
+    try {
+      return Promise.resolve(this.mkdirSync(givenPath));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  readSync(path: string) {
+    path = this.resolve(path);
+    if (this.existsSync(path)) {
+      const entry = this.contents.get(path) as Document<T>;
+      if (entry.isDirectory) {
+        throw new Error("Cannot read into a directory.");
+      }
+      return entry.data;
+    }
+    throw new Error("Cannot read file, path not found.");
+  }
+
+  read(path: string) {
+    try {
+      return Promise.resolve(this.readSync(path));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  readTextFileSync(path: string): string {
+    const content = this.readSync(path) as unknown as string;
+    if (typeof content === "string") {
+      return content;
+    }
+    throw new Error(`Cannot read non-text file "${path}".`);
+  }
+
+  readTextFile(path: string) {
+    try {
+      return Promise.resolve(this.readTextFileSync(path));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  readFileSync(path: string) {
+    return toTypedArray(this.readTextFileSync(path));
+  }
+
+  readFile(path: string) {
+    try {
+      return Promise.resolve(this.readFileSync(path));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  writeSync(givenPath: string, value: T) {
+    givenPath = this.resolve(givenPath);
+    const parentDirIndex = givenPath.split("/").length - 2;
+    if (givenPath === "/") {
+      throw new Error("Cannot create file as filesystem root.");
+    }
+    for (const { path, index } of this.traverse(givenPath)) {
+      if (index <= parentDirIndex && path !== "/") {
+        const entry = this.contents.get(path);
+        if (entry) {
+          if (entry.isFile) {
+            throw new Error(
+              `Path "${givenPath}" is not valid, "${path}" is a file.`,
+            );
+          }
+        } else {
+          throw new Error(
+            `Path "${givenPath}" is not valid, directory "${path}" not found.`,
+          );
+        }
+      }
+      if (index === parentDirIndex + 1) {
+        if (this.contents.get(path)?.isDirectory) {
+          throw new Error("Cannot write into a directory.");
+        }
+      }
+    }
+    const walkEntry: Omit<Document<T>, "data"> = {
+      path: givenPath,
+      name: givenPath.replace(/^.*[\\\/]/, ""),
+      isFile: true,
+      isDirectory: false,
+      isSymlink: false,
     };
-  }
-
-  private parsePath(path: string | URL) {
-    const res = path instanceof URL
-      ? normalize(path.toString())
-      : normalize(path);
-    return isAbsolute(res) ? res : join(this.CWD, res);
-  }
-
-  private tryReadFile(path: string | URL) {
-    path = this.parsePath(path);
-    if (this.getChildPaths(path).length > 0) {
-      throw new Error(`Cannot read directory "${path}" as a file.`);
-    }
-    const res = this.contents.get(path);
-    if (res) return res;
-    throw new Error(`File "${path}" not found.`);
-  }
-
-  add(path: string, value?: T): VirtualFileSystem<T> {
-    let walkEntry, _exists = false;
-    const nPath = normalize(path);
-    if (this.existsSync(nPath)) {
-      _exists = true;
-      walkEntry = this.getEntryFrom(nPath);
-    } else {
-      walkEntry = {
-        name: nPath.replace(/^.*[\\\/]/, ""),
-        path: nPath,
-        isFile: value ? true : false,
-        isDirectory: value ? false : true,
-        isSymlink: false,
-      };
-    }
-    this.contents.set(nPath, value as T);
-    if (_exists) {
+    if (this._exists(givenPath)) {
       this.emit("modify", walkEntry);
     } else {
       this.emit("create", walkEntry);
     }
-    return this;
+    this.contents.set(givenPath, {
+      data: value,
+      ...walkEntry,
+    } as Document<T>);
   }
 
-  remove(path: string): Promise<VirtualFileSystem<T>> {
-    path = this.parsePath(path);
-    return Promise.resolve(this.removeSync(path));
+  write(givenPath: string, value: T) {
+    try {
+      return Promise.resolve(this.writeSync(givenPath, value));
+    } catch (e) {
+      return Promise.reject(e);
+    }
   }
 
-  removeSync(path: string): VirtualFileSystem<T> {
-    path = this.parsePath(path);
-    this.getPaths().forEach((p) => {
-      if (p.startsWith(normalize(path))) {
-        const walkEntry = this.getEntryFrom(normalize(p));
-        this.contents.delete(p);
-        this.emit("remove", walkEntry);
+  add = this.writeSync;
+
+  writeFileSync(path: string, data: Uint8Array) {
+    const foundType = typeof data;
+    if (
+      foundType !== "object" ||
+      (data.toString && data.toString() !== "[object Uint8Array]")
+    ) {
+      throw new Error(
+        `Cannot write non-Uint8Array data when using writeFileSync() or writeFile().`,
+      );
+    }
+    return this.writeSync(path, new TextDecoder().decode(data) as unknown as T);
+  }
+
+  writeFile(path: string, data: Uint8Array) {
+    try {
+      return Promise.resolve(this.writeFileSync(path, data));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  writeTextFileSync(path: string, data: string) {
+    if (typeof data !== "string") {
+      throw new Error(
+        `Cannot write non-string data when using writeTextFileSync() or writeTextFile().`,
+      );
+    }
+    return this.writeSync(path, data as unknown as T);
+  }
+
+  writeTextFile(path: string, data: string) {
+    try {
+      return Promise.resolve(this.writeTextFileSync(path, data));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  removeSync(givenPath: string) {
+    givenPath = this.resolve(givenPath);
+    if (this._exists(givenPath)) {
+      if (this.contents.get(givenPath)?.isDirectory) {
+        for (const child of this.getChildPaths(givenPath)) {
+          this.removeSync(child);
+        }
       }
-    });
-    return this;
-  }
-
-  move(path: string, moveTo: string): VirtualFileSystem<T> {
-    path = this.parsePath(path);
-    const children = this.getChildPaths(path);
-
-    if (this.contents.has(path)) {
-      const walkEntry = this.getEntryFrom(path);
-      this.contents.set(moveTo, this.read(path) as T);
+      const { path, name, isFile, isDirectory, isSymlink } = this.contents.get(
+        givenPath,
+      ) as Item<T>;
+      this.emit("remove", { path, name, isFile, isDirectory, isSymlink });
       this.contents.delete(path);
-      this.emit("remove", walkEntry);
+    } else {
+      throw new Error(`Cannot remove "${givenPath}", path not found.`);
     }
-
-    for (let index = 0; index < children.length; index++) {
-      const child = children[index];
-      const parsed = child.split(path);
-      const walkEntry = this.getEntryFrom(path);
-      const newPath = moveTo + parsed[parsed.length - 1];
-      const stats = this.lstatSync(path);
-      const newWalkEntry = {
-        name: parsed[parsed.length - 1],
-        path: newPath,
-        ...stats,
-      };
-      this.contents.set(newPath, this.read(child) as T);
-      this.contents.delete(child);
-      this.emit("remove", walkEntry);
-      this.emit("create", newWalkEntry);
-    }
-
-    return this;
   }
 
-  clear(): VirtualFileSystem<T> {
-    this.contents.clear();
-    return this;
-  }
-
-  read(path: string | URL) {
-    path = this.parsePath(path);
-    return this.contents.get(path);
-  }
-
-  write(path: string | URL, value?: T) {
-    path = this.parsePath(path);
-    this.add(path, value);
-    return Promise.resolve();
-  }
-
-  writeSync(path: string | URL, value?: T) {
-    path = this.parsePath(path);
-    this.add(path, value);
-  }
-
-  mkdir(path: string | URL) {
-    path = this.parsePath(path);
-    this.add(path);
-    return Promise.resolve();
-  }
-
-  mkdirSync(path: string | URL) {
-    path = this.parsePath(path);
-    this.add(path);
-  }
-
-  readFile(path: string | URL) {
+  remove(path: string) {
     try {
-      const res = this.tryReadFile(path);
-      return Promise.resolve(toTypedArray(String(res)));
+      // TODO(tommywalkie): Consider using promises instead of just wrapping removeSync()
+      return Promise.resolve(this.removeSync(path));
     } catch (e) {
       return Promise.reject(e);
     }
   }
 
-  readFileSync(path: string | URL) {
-    const res = this.tryReadFile(path);
-    return toTypedArray(String(res));
+  /**
+   * Low-level folder creation implementation, given path must be absolute
+   * and valid, implying all parent folders exist.
+   * @private
+   */
+  private _lstat(existingPath: string): WalkEntry {
+    const { path, name, isFile, isDirectory, isSymlink } = this.contents.get(
+      existingPath,
+    ) as WalkEntry;
+    return { path, name, isFile, isDirectory, isSymlink };
   }
 
-  readTextFileSync(path: string | URL): string {
-    const res = this.tryReadFile(path);
-    if (typeof res === "string") return res;
-    throw new Error(`Cannot read non-text file "${path}".`);
+  lstatSync(givenPath: string) {
+    givenPath = this.resolve(givenPath);
+    if (this.contents.has(givenPath)) {
+      return this._lstat(givenPath);
+    }
+    throw new Error(`Path "${givenPath}" not found`);
   }
 
-  writeFile(path: string | URL, data: Uint8Array) {
+  lstat(givenPath: string) {
     try {
-      path = this.parsePath(path);
-      const str = new TextDecoder().decode(data);
-      this.add(path, str as unknown as T);
-      return Promise.resolve();
+      return Promise.resolve(this.lstatSync(givenPath));
     } catch (e) {
       return Promise.reject(e);
     }
   }
 
-  writeFileSync(path: string | URL, data: Uint8Array) {
-    path = this.parsePath(path);
-    const str = new TextDecoder().decode(data);
-    this.add(path, str as unknown as T);
-  }
-
-  writeTextFileSync(path: string | URL, data: string) {
-    path = this.parsePath(path);
-    this.add(path, data as unknown as T);
-  }
-
-  exists(path: string | URL) {
-    path = this.parsePath(path);
-    return this.contents.has(path)
-      ? Promise.resolve(true)
-      : Promise.resolve(false);
-  }
-
-  existsSync(path: string | URL) {
-    path = this.parsePath(path);
-    return this.contents.has(path);
-  }
-
-  lstat(path: string | URL) {
-    path = this.parsePath(path);
-    if (this.read(path)) {
-      return Promise.resolve({
-        isFile: true,
-        isDirectory: false,
-        isSymlink: false,
-      });
+  /**
+   * Low-level item moving implementation, destination path
+   * must be absolute and not be already registered in contents.
+   * @private
+   */
+  private _move(entry: Item<T>, to: string) {
+    if (entry.isDirectory) {
+      this.mkdirSync(to);
     }
-    if (this.getChildPaths(path).length > 0) {
-      return Promise.resolve({
-        isFile: false,
-        isDirectory: true,
-        isSymlink: false,
-      });
+    if (entry.isFile) {
+      // In theory, as long as public methods are used to
+      // populate filesystem, folders are guaranteed to be
+      // created before folder contents.
+      // So we can safely use `writeSync` here.
+      this.writeSync(to, (entry as Document).data);
     }
-    return Promise.reject(`Path "${path}" not found`);
+    this.emit("create", {
+      path: to,
+      name: entry.name,
+      isFile: entry.isFile,
+      isDirectory: entry.isDirectory,
+      isSymlink: entry.isSymlink,
+    });
+    // Unlike the case earlier, calling `removeSync`
+    // would recursively remove entries, and throw errors
+    // when retrieving deleted folder items' stats.
+    // We can prevent this by directly calling `<Map>.delete`.
+    this.contents.delete(entry.path);
+    this.emit("remove", {
+      path: entry.path,
+      name: entry.name,
+      isFile: entry.isFile,
+      isDirectory: entry.isDirectory,
+      isSymlink: entry.isSymlink,
+    });
   }
 
-  lstatSync(path: string | URL) {
-    path = this.parsePath(path);
-    if (this.read(path)) {
-      return { isFile: true, isDirectory: false, isSymlink: false };
+  moveSync(from: string, to: string) {
+    from = this.resolve(from);
+    to = this.resolve(to);
+    if (!this._exists(from)) {
+      throw new Error(`Cannot move not found "${from}" path.`);
     }
-    if (this.getChildPaths(path).length > 0) {
-      return { isFile: false, isDirectory: true, isSymlink: false };
+    if (dirname(to).length > 0 && !this._exists(dirname(to))) {
+      throw new Error(
+        `Cannot move "${from}" into invalid path "${to}", "${
+          dirname(to)
+        }" not found.`,
+      );
     }
-    throw new Error(`Path "${path}" not found`);
-  }
+    const fromStats = this._lstat(from);
+    if (!this._exists(to) && fromStats.isDirectory && to !== "/") {
+      this.mkdirSync(to);
+    }
 
-  walk(currentPath: string | URL) {
-    currentPath = this.parsePath(currentPath);
-    // deno-lint-ignore no-this-alias
-    const self = this;
-    async function* createAsyncIterable(syncIterable: Array<string>) {
-      for (const elem of syncIterable) {
-        const stats = await self.lstat(elem);
-        const entry = {
-          name: elem.replace(/^.*[\\\/]/, ""),
-          path: elem,
-          ...stats,
-        };
-        yield entry;
+    // Simulate root folder stats if needed, otherwise get destination stats as usual
+    let toStats: { isFile: boolean, isDirectory: boolean };
+    if (to === "/") {
+      toStats = { isFile: false, isDirectory: true }
+    }
+    else {
+      if (this._exists(to)) {
+        toStats = this._lstat(to);
+        if (fromStats.isFile && toStats.isFile) {
+          throw new Error(
+            `Cannot move "${from}" file into an existing "${to}" file.`,
+          );
+        }
+        if (fromStats.isDirectory && toStats.isFile) {
+          throw new Error(
+            `Cannot move "${from}" directory into an existing "${to}" file.`,
+          );
+        }
+      }
+      else {
+        toStats = { isFile: fromStats.isFile, isDirectory: fromStats.isDirectory }
       }
     }
-    return createAsyncIterable(this.getChildPaths(currentPath));
+    if (fromStats.isDirectory && toStats.isDirectory) {
+      for (const item of this.getChildPaths(from)) {
+        const stats = this._lstat(item);
+        if (stats.isDirectory) {
+          this._move(
+            this.contents.get(item) as Directory,
+            format(join(to, item.substr(from.length + 1))),
+          );
+        }
+        if (stats.isFile) {
+          this._move(
+            this.contents.get(item) as Document<T>,
+            format(join(to, item.substr(from.length + 1))),
+          );
+        }
+      }
+      this.removeSync(from);
+    }
+    if (fromStats.isFile && toStats.isDirectory) {
+      this._move(
+        this.contents.get(from) as Document<T>,
+        format(join(to, from.replace(/^.*[\\\/]/, ""))),
+      );
+    }
+    if (fromStats.isFile && toStats.isFile) {
+      this._move(
+        this.contents.get(from) as Document<T>,
+        to,
+      );
+    }
   }
 
-  walkSync(currentPath: string | URL) {
-    currentPath = this.parsePath(currentPath);
-    // deno-lint-ignore no-this-alias
-    const self = this;
-    function* createAsyncIterable(syncIterable: Array<string>) {
-      for (const elem of syncIterable) {
-        const stats = self.lstatSync(elem);
-        const entry = {
-          name: elem.replace(/^.*[\\\/]/, ""),
-          path: elem,
-          ...stats,
-        };
-        yield entry;
-      }
+  move(from: string, to: string) {
+    try {
+      // TODO(tommywalkie): Consider using promises instead of just wrapping moveSync()
+      Promise.resolve(this.moveSync(from, to));
+    } catch (e) {
+      return Promise.reject(e);
     }
-    return createAsyncIterable(this.getChildPaths(currentPath));
+  }
+
+  /**
+   * Rename synchronously a file or a directory. This method is almost the same
+   * as `moveSync` except the destination cannot be an existing entry,
+   * nor the root folder.
+   */
+  renameSync(from: string, to: string) {
+    from = this.resolve(from);
+    to = this.resolve(to);
+    if (!this._exists(from)) {
+      throw new Error(`Cannot rename not found "${from}" path.`);
+    }
+    if (to === "/") {
+      throw new Error(`Cannot rename "${from}" into root folder.`);
+    }
+    if (dirname(to).length > 0 && !this._exists(dirname(to))) {
+      throw new Error(
+        `Path "${to}" is invalid, "${
+          dirname(to)
+        }" not found.`,
+      );
+    }
+    if (this._exists(to)) {
+      throw new Error(
+        `Cannot rename "${from}" path into an existing "${to}" path.`,
+      );
+    }
+    const fromStats = this._lstat(from);
+    if (!this._exists(to) && fromStats.isDirectory) {
+      this.mkdirSync(to);
+    }
+    if (fromStats.isDirectory) {
+      for (const item of this.getChildPaths(from)) {
+        const stats = this._lstat(item);
+        if (stats.isDirectory) {
+          this._move(
+            this.contents.get(item) as Directory,
+            format(join(to, item.substr(from.length + 1))),
+          );
+        }
+        if (stats.isFile) {
+          this._move(
+            this.contents.get(item) as Document<T>,
+            format(join(to, item.substr(from.length + 1))),
+          );
+        }
+      }
+      this.removeSync(from);
+    }
+    if (fromStats.isFile) {
+      this._move(
+        this.contents.get(from) as Document<T>,
+        format(join(to, from.substr(from.length + 1))),
+      );
+    }
+  }
+
+  rename(from: string, to: string) {
+    try {
+      // TODO(tommywalkie): Consider using promises instead of just wrapping renameSync()
+      Promise.resolve(this.renameSync(from, to));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  *walkSync(givenPath: string) {
+    for (const elem of this.getChildPaths(givenPath)) {
+      yield this._lstat(elem);
+    }
+  }
+
+  async *walk(givenPath: string) {
+    try {
+      for await (const elem of this.getChildPaths(givenPath)) {
+        yield this._lstat(elem);
+      }
+    } catch (e) {
+      return Promise.reject(e);
+    }
   }
 
   watch(paths: string | string[]): AsyncPushIterator<FsEvent> {
@@ -288,6 +580,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents> {
     if (!Array.isArray(paths)) {
       paths = [paths];
     }
+    paths = paths.map(el => this.resolve(el));
     return new AsyncPushIterator<FsEvent>((it) => {
       const intervalId = setInterval(() => {
         if (events.length > 0) {
@@ -296,7 +589,7 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents> {
             const eventPath = event.paths[0];
             events = events.filter((el) => el._id !== event._id);
             for (let i = 0; i < paths.length; i++) {
-              if (eventPath.startsWith(normalize(paths[i]))) {
+              if (eventPath.startsWith(paths[i])) {
                 it.push(event);
               }
             }
@@ -336,11 +629,15 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents> {
     });
   }
 
+  clear() {
+    this.contents.clear();
+  }
+
   getPaths(): string[] {
     return Array.from(this.contents.keys());
   }
 
-  getContents(): T[] {
+  getContents(): Item<T>[] {
     return Array.from(this.contents.values());
   }
 
@@ -349,7 +646,9 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents> {
   }
 
   getChildPaths(path: string): string[] {
-    return this.getPaths().filter((p) => p.startsWith(path) && p !== path);
+    return this.getPaths().filter((p) =>
+      p.startsWith(path + "/") && p !== path
+    );
   }
 
   getChildNames(path: string): string[] {
@@ -365,34 +664,34 @@ export class VirtualFileSystem<T = any> extends EventEmitter<WatchEvents> {
 
   map<R = T>(
     fn: (res: T, path: string) => R,
-  ): VirtualFileSystem<R> {
-    const res = new VirtualFileSystem<R>();
+  ) {
+    const res = new FileSystem<R>();
     this.contents.forEach((item, key) => {
-      res.add(key, fn(item, key));
+      res.add(key, fn(item.data as T, key));
     });
     return res;
   }
 
-  filter(fn: (res: T, path: string) => boolean): VirtualFileSystem<T> {
-    const res = new VirtualFileSystem<T>();
+  filter(fn: (res: T, path: string) => boolean) {
+    const res = new FileSystem<T>();
     this.contents.forEach((item, key) => {
-      if (fn(item, key)) {
-        res.add(key, item);
+      if (fn(item.data as T, key)) {
+        res.add(key, item.data as T);
       }
     });
     return res;
   }
 }
 
-/**
- * Generates a virtual filesystem implementing all methods from
- * [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs)'s `VirtualFileSystem<T>` class,
- * plus `FileSystemLike` bindings including `lstat`, `walk`, `exists`, etc.
- */
-export function createVirtualFileSystem<T = any>(): VirtualFileSystem<T> {
-  return new VirtualFileSystem<T>();
+export function createVirtualFileSystem<T = any>(): FileSystem<T> {
+  return new FileSystem<T>();
 }
 
-createVirtualFileSystem();
+export { createVirtualFileSystem as createFileSystem }
 
-export type { FileSystemLike, FsEvent, WalkEntry };
+export type {
+  FileSystem as VirtualFileSystem,
+  FileSystemLike,
+  FsEvent,
+  WalkEntry,
+};
