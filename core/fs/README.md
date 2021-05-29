@@ -16,29 +16,29 @@ Provides a battle-tested and event-driven virtual filesystem implementation, bui
 
 This filesystem is compliant with Gauntlet's `FileSystemLike` interface and implements most methods found in filesystem modules, while also supporting relative and absolute paths as inputs.
 
-- [Usage](https://github.com/tommywalkie/gauntlet/core#usage)
-  - [Create a new filesystem](https://github.com/tommywalkie/gauntlet/core#create-a-new-filesystem)
-  - [Get current working directory](https://github.com/tommywalkie/gauntlet/core#get-current-working-directory)
-  - [Switch current working directory](https://github.com/tommywalkie/gauntlet/core#switch-current-working-directory)
-  - [Write a new file](https://github.com/tommywalkie/gauntlet/core#write-a-new-file)
-  - [Read a file](https://github.com/tommywalkie/gauntlet/core#read-a-file)
-  - [Check if path exists](https://github.com/tommywalkie/gauntlet/core#check-if-path-exists)
-  - [Create a new directory](https://github.com/tommywalkie/gauntlet/core#create-a-new-directory)
-  - [Get path stats](https://github.com/tommywalkie/gauntlet/core#get-path-stats)
-  - [Remove a file or a directory](https://github.com/tommywalkie/gauntlet/core#remove-a-file-or-a-directory)
-  - [Move a file or a directory](https://github.com/tommywalkie/gauntlet/core#move-a-file-or-a-directory)
-  - [Rename a file or a directory](https://github.com/tommywalkie/gauntlet/core#rename-a-file-or-a-directory)
-  - [Watch for filesystem events](https://github.com/tommywalkie/gauntlet/core#watch-for-filesystem-events)
-  - [Map over filesystem items](https://github.com/tommywalkie/gauntlet/core#map-over-filesystem-items)
-  - [Filter filesystem items](https://github.com/tommywalkie/gauntlet/core#filter-filesystem-items)
-  - [Clear filesystem](https://github.com/tommywalkie/gauntlet/core#clear-filesystem)
+- [Usage](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#usage)
+  - [Create a new filesystem](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#create-a-new-filesystem)
+  - [Get current working directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#get-current-working-directory)
+  - [Switch current working directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#switch-current-working-directory)
+  - [Write a new file](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#write-a-new-file)
+  - [Read a file](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#read-a-file)
+  - [Check if path exists](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#check-if-path-exists)
+  - [Create a new directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#create-a-new-directory)
+  - [Get path stats](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#get-path-stats)
+  - [Remove a file or a directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#remove-a-file-or-a-directory)
+  - [Move a file or a directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#move-a-file-or-a-directory)
+  - [Rename a file or a directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#rename-a-file-or-a-directory)
+  - [Watch for filesystem events](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#watch-for-filesystem-events)
+  - [Map over filesystem items](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#map-over-filesystem-items)
+  - [Filter filesystem items](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#filter-filesystem-items)
+  - [Clear filesystem](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#clear-filesystem)
 
 ## Usage
 
 ### Create a new filesystem
 
 ```typescript
-import { FileSystem } from "https://deno.land/x/gauntlet/core/fs/mod.ts"
+import { FileSystem } from "https://deno.land/x/gauntlet/tree/main/core/fs/fs/mod.ts"
 const fs = new FileSystem<string>(); // Can be generic-typed (default: any)
 ```
 
