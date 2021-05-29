@@ -18,7 +18,7 @@ if (!('Symbol' in self && 'asyncIterator' in self.Symbol)) {
   Deno.mkdirSync(distDir, { recursive: true });
 
   // ESM build
-  const { files } = await Deno.emit("./src/core/mod.ts", {
+  const { files } = await Deno.emit("./core/mod.ts", {
     bundle: "module",
   });
   const output = `${asyncIteratorPolyfill}\n\n${files["deno:///bundle.js"]}`;

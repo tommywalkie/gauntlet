@@ -1,5 +1,5 @@
 import { expect, it } from "../../imports/expect.ts";
-import { createVirtualFileSystem } from "./fs.ts";
+import { createVirtualFileSystem } from "./mod.ts";
 
 it("can set up a filesystem", () => {
   const fs = createVirtualFileSystem<string>();
@@ -19,6 +19,7 @@ it("can parse a relative input filesystem path", () => {
   expect(fs.resolve("..")).toBe("/");
   expect(fs.resolve(".")).toBe("/");
   expect(fs.resolve("./")).toBe("/");
+  expect(fs.resolve("/")).toBe("/");
 });
 
 it("can create a folder synchronously in a filesystem", () => {
@@ -83,7 +84,7 @@ it("cannot write a file synchronously inside a non-existing folder in a filesyst
   expect(() => fs.writeSync("A/B.txt", "hello world")).toThrow();
 });
 
-it("cannot write a file asynchronously inside a non-existing folder in a filesystem", async () => {
+it("cannot write a file asynchronously inside a non-existing folder in a filesystem", () => {
   const fs = createVirtualFileSystem<string>();
   expect(fs.write("A/B.txt", "hello world")).rejects.toThrow();
 });
@@ -133,7 +134,7 @@ it("cannot synchronously remove a non-existing path in a filesystem", () => {
   expect(() => fs.removeSync("foo")).toThrow();
 });
 
-it("cannot asynchronously remove a non-existing path in a filesystem", async () => {
+it("cannot asynchronously remove a non-existing path in a filesystem", () => {
   const fs = createVirtualFileSystem<string>();
   expect(fs.remove("foo")).rejects.toThrow();
 });
@@ -219,7 +220,7 @@ it("cannot retrieve non-existing file stats synchronously in a filesystem", () =
   expect(() => fs.lstatSync("A.txt")).toThrow();
 });
 
-it("cannot retrieve non-existing file stats asynchronously in a filesystem", async () => {
+it("cannot retrieve non-existing file stats asynchronously in a filesystem", () => {
   const fs = createVirtualFileSystem<string>();
   expect(fs.lstat("A.txt")).rejects.toThrow();
 });
@@ -358,6 +359,16 @@ it("can move folder contents asynchronously in a non-existing folder in a filesy
   expect(fs.exists("E/B.txt")).resolves.toBeTruthy();
 });
 
+it("cannot move folder items and override existing destination folder items in a filesystem", () => {
+  const fs = createVirtualFileSystem<string>();
+  fs.mkdirSync("A");
+  fs.writeSync("A/B.txt", "foo bar");
+  fs.mkdirSync("C");
+  fs.writeSync("C/B.txt", "hello world");
+  expect(() => fs.moveSync("A", "C")).toThrow();
+  expect(fs.readSync("C/B.txt")).toBe("hello world");
+});
+
 it("can change current working directory in a filesystem", () => {
   const fs = createVirtualFileSystem<string>();
   fs.mkdirSync("A");
@@ -371,6 +382,11 @@ it("can change current working directory in a filesystem", () => {
   expect(fs.existsSync("A/C.txt")).toBeFalsy();
   expect(fs.existsSync("C.txt")).toBeTruthy();
   fs.cd("..");
+  expect(fs.existsSync("A/B.txt")).toBeTruthy();
+  expect(fs.existsSync("A/C.txt")).toBeTruthy();
+  fs.cd("./A");
+  expect(fs.existsSync("B.txt")).toBeTruthy();
+  fs.cd("/");
   expect(fs.existsSync("A/B.txt")).toBeTruthy();
   expect(fs.existsSync("A/C.txt")).toBeTruthy();
 });
@@ -531,4 +547,80 @@ it("watch for filesystem events", async () => {
     incr.push(event.kind);
   }
   expect(incr.join()).toBe("create,create,modify,remove");
+});
+
+it("can list items in a filesystem", () => {
+  const fs = createVirtualFileSystem<string>();
+  fs.mkdirSync("A");
+  fs.mkdirSync("A/B");
+  fs.writeSync("A/B/C.txt", "hello world");
+  fs.writeSync("A/D.txt", "hello world");
+  expect(fs.ls("A").length).toBe(2);
+});
+
+it("can list items recursively in a filesystem", () => {
+  const fs = createVirtualFileSystem<string>();
+  fs.mkdirSync("A");
+  fs.mkdirSync("A/B");
+  fs.writeSync("A/B/C.txt", "hello world");
+  fs.writeSync("A/D.txt", "hello world");
+  expect(fs.ls("A", true).length).toBe(3);
+});
+
+it("can walk folder items synchronously in a filesystem", () => {
+  const fs = createVirtualFileSystem<string>();
+  fs.mkdirSync("A");
+  fs.mkdirSync("A/B");
+  fs.writeSync("A/B/C.txt", "hello world");
+  fs.writeSync("D.txt", "hello world");
+  let i = 0;
+  for (const entry of fs.walkSync("A")) {
+    if (i === 0) expect(entry.isDirectory).toBeTruthy();
+    if (i === 1) expect(entry.isFile).toBeTruthy();
+    i++;
+  }
+  expect(i).toBe(2);
+});
+
+it("can walk folder items asynchronously in a filesystem", async () => {
+  const fs = createVirtualFileSystem<string>();
+  await fs.mkdir("A");
+  await fs.mkdir("A/B");
+  await fs.write("A/B/C.txt", "hello world");
+  await fs.write("D.txt", "hello world");
+  let i = 0;
+  for await (const entry of fs.walk("A")) {
+    if (i === 0) expect(entry.isDirectory).toBeTruthy();
+    if (i === 1) expect(entry.isFile).toBeTruthy();
+    i++;
+  }
+  expect(i).toBe(2);
+});
+
+it("cannot walk a file synchronously in a filesystem", () => {
+  const fs = createVirtualFileSystem<string>();
+  fs.writeSync("A.txt", "hello world");
+  let err
+  try {
+    for (const _ of fs.walkSync("A.txt")) {
+      // Should throw an error
+    }
+  } catch (error) {
+    err = error
+  }
+  expect(err).toBeTruthy();
+});
+
+it("cannot walk a file asynchronously in a filesystem", async () => {
+  const fs = createVirtualFileSystem<string>();
+  await fs.write("A.txt", "hello world");
+  let err
+  try {
+    for await (const _ of fs.walk("A.txt")) {
+      // Should throw an error
+    }
+  } catch (error) {
+    err = error
+  }
+  expect(err).toBeTruthy();
 });

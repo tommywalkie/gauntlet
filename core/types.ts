@@ -1,5 +1,14 @@
 // deno-lint-ignore-file no-explicit-any
 
+// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
+export interface WalkEntry {
+  path: string;
+  name: string;
+  isFile: boolean;
+  isDirectory: boolean;
+  isSymlink: boolean;
+}
+
 /**
  * File watching events interface, designed for the `EventEmitter<T>`
  * implementation from `deno_events`
@@ -34,36 +43,12 @@ export interface WatchEvent {
   entry: WalkEntry;
 }
 
-export interface WatcherOptions {
-  source: string;
-  fs: FileSystemLike;
-}
-
-export type FsEventKind = "create" | "modify" | "remove";
-
 /**
  * Base file watching event
  */
 export interface FsEvent {
   kind: FsEventKind | string;
   paths: string[];
-}
-
-/**
- * Base file watching event
- */
-export interface VirtualFileSystemEvent {
-  kind: FsEventKind | "rename";
-  paths: string[];
-}
-
-// Copyright 2018-2021 the Deno authors. All rights reserved. MIT license.
-export interface WalkEntry {
-  path: string;
-  name: string;
-  isFile: boolean;
-  isDirectory: boolean;
-  isSymlink: boolean;
 }
 
 /**
@@ -79,4 +64,19 @@ export interface FileSystemLike {
     ...options: any | undefined
   ) => AsyncIterableIterator<FsEvent>;
   readFileSync: (path: string | URL) => Uint8Array;
+}
+
+export interface WatcherOptions {
+  source: string;
+  fs: FileSystemLike;
+}
+
+export type FsEventKind = "create" | "modify" | "remove";
+
+/**
+ * Base file watching event
+ */
+export interface VirtualFileSystemEvent {
+  kind: FsEventKind | "rename";
+  paths: string[];
 }

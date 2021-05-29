@@ -1,1 +1,2 @@
-export * from "./src/mod.ts";
+export * from "./core/mod.ts";
+export * from "./server/mod.ts";

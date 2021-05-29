@@ -1,4 +1,4 @@
-import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
+import { EventEmitter } from "../imports/pietile-eventemitter.ts";
 import {
   blue,
   bold,
@@ -7,9 +7,9 @@ import {
   green,
   red,
   yellow,
-} from "../../imports/std.ts";
-import { normalize } from "../../imports/path.ts";
-import { WalkEntry } from "../core/fs.ts";
+} from "../imports/std.ts";
+import { normalize } from "../imports/path.ts";
+import { WalkEntry } from "../core/types.ts";
 import type { DevServerEvents } from "./types.ts";
 
 const DEBUG_PREFIX = `${gray("[")}${bold(blue("DEBUG"))}${gray("] —")}`;

@@ -1,11 +1,16 @@
+import { isAbsolute, join, normalize } from "../../imports/path.ts";
+import { randomId, toArraySync } from "../utils.ts";
 import {
   AsyncPushIterator,
   AsyncPushIteratorSetup,
 } from "../../imports/graphqlade.ts";
-import { isAbsolute, join, normalize } from "../../imports/path.ts";
-import { randomId, toArraySync } from "./utils.ts";
-import type { FileSystemLike, FsEvent, WalkEntry } from "./fs.ts";
-import type { WatcherOptions, WatchEvent } from "./types.ts";
+import type {
+  FileSystemLike,
+  FsEvent,
+  WalkEntry,
+  WatcherOptions,
+  WatchEvent,
+} from "../types.ts";
 
 /**
  * Based on an `AsyncIterator` superset originally designed

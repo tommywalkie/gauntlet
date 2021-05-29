@@ -1,9 +1,10 @@
+// deno-lint-ignore-file no-explicit-any
 import {
   WebSocketAcceptedClient,
   WebSocketServer,
-} from "../../imports/deno-websocket.ts";
-import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
-import { Buffer } from "../../imports/buffer.ts";
+} from "../imports/deno-websocket.ts";
+import { EventEmitter } from "../imports/pietile-eventemitter.ts";
+import { Buffer } from "../imports/buffer.ts";
 
 export interface Dependency {
   dependents: Set<string>;
@@ -55,7 +56,7 @@ export class EsmHmrEngine {
       : new WebSocketServer(12321);
     if (options.server) {
       options.server.on("upgrade", (req, socket, head) => {
-        // @ts-ignore
+        // @ts-ignore: need to type req somehow
         if (req.headers["sec-websocket-protocol"] !== "esm-hmr") {
           return;
         }
@@ -120,7 +121,7 @@ export class EsmHmrEngine {
   }
 
   removeRelationship(sourceUrl: string, importUrl: string) {
-    let importResult = this.getEntry(importUrl);
+    const importResult = this.getEntry(importUrl);
     importResult && importResult.dependents.delete(sourceUrl);
     const sourceResult = this.getEntry(sourceUrl);
     sourceResult && sourceResult.dependencies.delete(importUrl);
@@ -128,7 +129,7 @@ export class EsmHmrEngine {
 
   addRelationship(sourceUrl: string, importUrl: string) {
     if (importUrl !== sourceUrl) {
-      let importResult = this.getEntry(importUrl, true)!;
+      const importResult = this.getEntry(importUrl, true)!;
       importResult.dependents.add(sourceUrl);
       const sourceResult = this.getEntry(sourceUrl, true)!;
       sourceResult.dependencies.add(importUrl);
@@ -139,7 +140,7 @@ export class EsmHmrEngine {
     entry.needsReplacement = state;
   }
 
-  broadcastMessage(data: object) {
+  broadcastMessage(data: Record<string, unknown>) {
     this.clients.forEach((client) => {
       if (client.state === WebSocket.OPEN) {
         client.send(JSON.stringify(data));

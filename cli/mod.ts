@@ -1,7 +1,7 @@
 // deno-lint-ignore-file
 
 import { docopt } from "./docopt.ts";
-import { format, yellow } from "../../imports/std.ts";
+import { format, yellow } from "../imports/std.ts";
 
 import type {
   Callback,

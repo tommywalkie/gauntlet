@@ -11,7 +11,9 @@
 /commands
 
 # source code
-/src
+/cli
+/core
+/server
 
 # deno imports
 /imports

@@ -1,6 +1,6 @@
 // deno-lint-ignore-file
 
-import { blue, cyan, gray, green, yellow } from "../../imports/std.ts";
+import { blue, cyan, gray, green, yellow } from "../imports/std.ts";
 import type { Flag, Option, Program } from "./types.ts";
 
 const NEXT_LINE_ALINEA = "\n   ";

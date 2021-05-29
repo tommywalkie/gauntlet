@@ -1,15 +1,15 @@
 // deno-lint-ignore-file
 
-import { FileWatcher } from "./watcher.ts";
-import { VirtualFileSystem } from "./fs.ts";
-import { toArraySync } from "./utils.ts";
 import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
+import { isAbsolute, join } from "../../imports/path.ts";
+import { FileWatcher } from "../watcher/mod.ts";
+import { VirtualFileSystem } from "../fs/mod.ts";
+import { toArraySync } from "../utils.ts";
 import {
   AsyncPushIterator,
   AsyncPushIteratorSetup,
 } from "../../imports/graphqlade.ts";
-import { isAbsolute, join } from "../../imports/path.ts";
-import type { WatchEvents } from "./types.ts";
+import type { WatchEvents } from "../types.ts";
 
 export interface CompilerEvent {
   kind: string;

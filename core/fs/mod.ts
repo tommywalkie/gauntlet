@@ -1,15 +1,15 @@
 // deno-lint-ignore-file no-explicit-any
 import { AsyncPushIterator } from "../../imports/graphqlade.ts";
-import { isAbsolute, join, normalize } from "../../imports/path.ts";
 import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
-import { randomId, toTypedArray } from "./utils.ts";
+import { isAbsolute, join, normalize } from "../../imports/path.ts";
+import { randomId, toTypedArray } from "../utils.ts";
 import type {
   FileSystemLike,
   FsEvent,
   FsEventKind,
   WalkEntry,
   WatchEvents,
-} from "./types.ts";
+} from "../types.ts";
 
 export interface Item<T = any> extends WalkEntry {
   data?: T;
@@ -41,7 +41,9 @@ export function replaceSlashes(str: string) {
  */
 export function format(path: string) {
   const res = replaceSlashes(normalize(path));
-  return res.length > 1 && res[res.length - 1] === "/" ? res.substr(0, res.length - 1) : res;
+  return res.length > 1 && res[res.length - 1] === "/"
+    ? res.substr(0, res.length - 1)
+    : res;
 }
 
 export function dirname(entry: string) {
@@ -57,10 +59,11 @@ export interface PathItem {
   index: number;
 }
 
-export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
-  protected root: string = "/";
-  protected CWD: string = this.root;
-  protected contents = new Map<string, Item<T>>();
+export class FileSystem<T = any> extends EventEmitter<WatchEvents>
+  implements FileSystemLike {
+  private root = "/";
+  private CWD: string = this.root;
+  private contents = new Map<string, Item<T>>();
 
   get size(): number {
     return this.contents.size;
@@ -71,7 +74,7 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
    * returns an iterator, for each folder.
    * This utility doesn't check if these folders actually exist.
    */
-  *traverse(givenPath: string): IterableIterator<PathItem> {
+  private *traverse(givenPath: string): IterableIterator<PathItem> {
     if (!isAbsolute(givenPath)) {
       throw new Error("Cannot traverse a relative path.");
     }
@@ -96,8 +99,7 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
     path = this.resolve(path);
     if (path === "/") {
       this.CWD = path;
-    }
-    else {
+    } else {
       if (!this.existsSync(path)) {
         throw new Error(
           `Cannot use a non-existing "${path}" entry as current working directory.`,
@@ -215,7 +217,8 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
     }
   }
 
-  readFileSync(path: string) {
+  readFileSync(path: string | URL) {
+    if (path instanceof URL) path = path.toString();
     return toTypedArray(this.readTextFileSync(path));
   }
 
@@ -431,11 +434,10 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
     }
 
     // Simulate root folder stats if needed, otherwise get destination stats as usual
-    let toStats: { isFile: boolean, isDirectory: boolean };
+    let toStats: { isFile: boolean; isDirectory: boolean };
     if (to === "/") {
-      toStats = { isFile: false, isDirectory: true }
-    }
-    else {
+      toStats = { isFile: false, isDirectory: true };
+    } else {
       if (this._exists(to)) {
         toStats = this._lstat(to);
         if (fromStats.isFile && toStats.isFile) {
@@ -448,24 +450,32 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
             `Cannot move "${from}" directory into an existing "${to}" file.`,
           );
         }
-      }
-      else {
-        toStats = { isFile: fromStats.isFile, isDirectory: fromStats.isDirectory }
+      } else {
+        toStats = {
+          isFile: fromStats.isFile,
+          isDirectory: fromStats.isDirectory,
+        };
       }
     }
     if (fromStats.isDirectory && toStats.isDirectory) {
       for (const item of this.getChildPaths(from)) {
         const stats = this._lstat(item);
+        const destPath = format(join(to, item.substr(from.length + 1)));
         if (stats.isDirectory) {
           this._move(
             this.contents.get(item) as Directory,
-            format(join(to, item.substr(from.length + 1))),
+            destPath,
           );
         }
         if (stats.isFile) {
+          if (this._exists(destPath)) {
+            throw new Error(
+              `Cannot override existing "${destPath}" file while moving "${from}" directory into "${to}".`,
+            );
+          }
           this._move(
             this.contents.get(item) as Document<T>,
-            format(join(to, item.substr(from.length + 1))),
+            destPath,
           );
         }
       }
@@ -510,9 +520,7 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
     }
     if (dirname(to).length > 0 && !this._exists(dirname(to))) {
       throw new Error(
-        `Path "${to}" is invalid, "${
-          dirname(to)
-        }" not found.`,
+        `Path "${to}" is invalid, "${dirname(to)}" not found.`,
       );
     }
     if (this._exists(to)) {
@@ -560,6 +568,14 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
   }
 
   *walkSync(givenPath: string) {
+    givenPath = this.resolve(givenPath);
+    if (this._exists(givenPath)) {
+      if (this._lstat(givenPath).isFile) {
+        throw new Error(
+          `Cannot walk a "${givenPath}" file.`,
+        );
+      }
+    }
     for (const elem of this.getChildPaths(givenPath)) {
       yield this._lstat(elem);
     }
@@ -567,6 +583,14 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
 
   async *walk(givenPath: string) {
     try {
+      givenPath = this.resolve(givenPath);
+      if (this._exists(givenPath)) {
+        if (this._lstat(givenPath).isFile) {
+          throw new Error(
+            `Cannot walk a "${givenPath}" file.`,
+          );
+        }
+      }
       for await (const elem of this.getChildPaths(givenPath)) {
         yield this._lstat(elem);
       }
@@ -580,7 +604,7 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
     if (!Array.isArray(paths)) {
       paths = [paths];
     }
-    paths = paths.map(el => this.resolve(el));
+    paths = paths.map((el) => this.resolve(el));
     return new AsyncPushIterator<FsEvent>((it) => {
       const intervalId = setInterval(() => {
         if (events.length > 0) {
@@ -645,6 +669,15 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents> {
     return this.getChildPaths("");
   }
 
+  ls(path: string, recursive = false) {
+    path = this.resolve(path);
+    return this.getChildPaths(path).filter((el) => {
+      return recursive
+        ? true
+        : el.split("/").length === path.split("/").length + 1;
+    });
+  }
+
   getChildPaths(path: string): string[] {
     return this.getPaths().filter((p) =>
       p.startsWith(path + "/") && p !== path
@@ -690,10 +723,4 @@ export function createVirtualFileSystem<T = any>(): FileSystem<T> {
 export {
   createVirtualFileSystem as createFileSystem,
   FileSystem as VirtualFileSystem,
-}
-
-export type {
-  FileSystemLike,
-  FsEvent,
-  WalkEntry,
 };

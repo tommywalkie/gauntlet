@@ -1,6 +1,7 @@
 <!-- deno-fmt-ignore-file -->
+
 <p align="center">
-  <img height="80" src="https://raw.githubusercontent.com/tommywalkie/gauntlet/main/.github/assets/logo.svg">
+  <img height="120" src="https://raw.githubusercontent.com/tommywalkie/gauntlet/main/.github/assets/logo.svg">
   <h1 align="center">Gauntlet</h1>
 </p>
 <p align="center">
@@ -16,6 +17,7 @@
   <a href="https://github.com/tommywalkie/gauntlet/actions/workflows/ubuntu.yml"><img src="https://img.shields.io/github/workflow/status/tommywalkie/gauntlet/Ubuntu?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAACVUlEQVRIS8WXgVEUQRBF/49AiUCMQIlAiUCJAMlAIhAjUCJQIsAMhAiACIQMIIK23lbPVt/UHburnHbV1VXdzPTv/vO7e876T+Zt4UbEB0mHkm4lHdu+r1hbAY6Ij5K+FKBr23v/AvhC0puOzT3b1+23P8o4It5LeidpV9LbAgDgsaSTXK/YO5XuRcAR8VwSd1dp7GVyJumrJIJ4loufbRPMaLOAExCwOxxEBIJ58YgwuWMCeC3pvlK8iOqI4G5e5aGX6fBc0g2OU7nQDlDLkuD4YGQMA/MzjojvWRbt0IXt/YjYtd0cjw6zjKC6BcAawSGucf+jVEcEwvnZUXpkm2A2Wl4NGTaW2DsEPIvqjmLO0AjIZtISnCuqWthvlG/MOCK4r6uCcGm7ls4c8J6xM9tUhVaA836IEEVSOrUkDmz/mETrNnQVgMJ3VoDXiOggVfpp2GjPKr0+sIigfgcfaUMjGZyhUEm/ukOX2YEQF/XLnsWWvutZ+vZs4Fvb1O9iS+AqsJsROLPu63X7VLc0UlzQQhCIC5r5xp5CXA+2B39LymmlAczhfE0DWl9OaxRZezTLSxsIfaAKa7qB5L3/TcvkmmhCzVYa0GRtrqnvwcHEkGCENm0A/EAQs4dEEd2mscjv/VhsgHdlLJ4sHotJOc4YDtTznIfAkSTaK9MJJY9vrZbMJNVVcDlxeF3UFthr8jTLsZbiqW3OjbYIuFDPY48Piq2vSdosAE/72JtTu3k123neTgWQHfBb2Ud/rqW1uXNNOZ9aT3CGPsJC1dv/CzMVFOu/AZB7Bi7zlZ76AAAAAElFTkSuQmCC&label=Ubuntu"/></a>
   <a href="https://github.com/tommywalkie/gauntlet/actions/workflows/macos.yml"><img src="https://img.shields.io/github/workflow/status/tommywalkie/gauntlet/MacOS?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAABrUlEQVRIS92Wi03DQBBEZyoAOiAdhAoIFUAqACoAKgAqgA6ACiAVEDqgA0IFQAWDBp2R49z5bHwBiZUsRcr63u2s90P8kbEUV9I2gH0AryQfcucWAUu6AHAeYGckr9cOlnQL4LAG2iH5vFawpAMA9zXIE8lJDur/B0ktaQ5gN4A+AEy6RFsCrJ9AS4CdX0f9QPK9i8SVT6vUkjYBnFjC8CxqoJkPCWVkH+fbJWWr/C5J+veKJcHhw7kBYHjMHKGfCpbycXlZmSWLgiU5wsc+0mV8t5qpWAEHeV9aIu17n+NOEUs6BXDV9/SEv3PsrpbPcaM2h/Dds5P5j0ld1eYQqN+9I3mUOmSd4KTMvsy/BM9IuqlELRaxm8LG0ASH90edO5ckbw/eJEqYe/i0azmVrGMz3S7dNpeGSKpzvZUIt3bGguSofmaqV5eU27yVD+23hsQeSc/tb2sbi6WijpZVG9hz2EN8SGl5DxvHSiq3gTS3yL7f3DS13Ge3TElu9N5E6uZInDPvz+OwFjWVic7h6pAs2I5hr/IFLP88FkVYlXyJr9pNdaxe4L76dvH/BL1gpR+vRyf1AAAAAElFTkSuQmCC&label=MacOS"/></a>
 </p>
+
 
 
 

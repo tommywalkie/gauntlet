@@ -11,8 +11,7 @@ export async function dev() {
     const devServer = runDevServer({
       port: 8000,
       eventSource: defaultEmitter,
-      mounts: ["./src", "./imports"],
-      // mounts: ["./src"],
+      mounts: ["./core"],
     });
 
     for await (const _ of devServer) {

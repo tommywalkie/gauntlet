@@ -1,5 +1,5 @@
 // Node.Buffer compatibility layer for Deno and the browser
-import type { Buffer } from "../../imports/buffer.ts";
+import type { Buffer } from "../../../imports/buffer.ts";
 
 // Copyright 2019 Fred K. Schott. All rights reserved. MIT license.
 export interface BaseOptions {
