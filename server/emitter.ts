@@ -52,7 +52,7 @@ emitter.on(
   "watch",
   (entry: WalkEntry) =>
     logger.info(
-      `Now watching ${bold(yellow(normalize(entry.path)))} for file changes...`,
+      `Now watching ${bold(yellow(normalize(entry.name)))} for file changes...`,
     ),
 );
 

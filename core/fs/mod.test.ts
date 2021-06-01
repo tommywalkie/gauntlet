@@ -539,7 +539,7 @@ it("watch for filesystem events", async () => {
   setTimeout(() => fs.writeSync("/A/B.txt", 3), 250);
   setTimeout(() => fs.writeSync("/D.txt", 4), 120);
   setTimeout(() => fs.removeSync("/A/B.txt"), 320);
-  const watcher = fs.watch("A");
+  const watcher = fs.watchFs("A");
   setTimeout(() => {
     watcher.return();
   }, 400);

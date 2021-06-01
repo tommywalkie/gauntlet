@@ -219,7 +219,7 @@ setTimeout(() => fs.writeSync("/A.txt", "editted hello world"), 150);
 setTimeout(() => fs.removeSync("/A.txt"), 250);
 
 // Launch the file watcher
-for await (const event of fs.watch("/") {
+for await (const event of fs.watchFs("/") {
   console.log(event);
   // { kind: "create", entry: { path: "/A.txt", ... } }
   // { kind: "modify", entry: { path: "/A.txt", ... } }

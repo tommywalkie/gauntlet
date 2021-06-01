@@ -695,7 +695,7 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents>
     }
   }
 
-  watch(paths: string | string[]): AsyncPushIterator<FsEvent> {
+  watchFs(paths: string | string[]): AsyncPushIterator<FsEvent> {
     let events: Array<FsEvent & { _id: string }> = [];
     if (!Array.isArray(paths)) {
       paths = [paths];

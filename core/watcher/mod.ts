@@ -70,7 +70,7 @@ export function watchFs(options: WatcherOptions): FileWatcher {
   return new FileWatcher(
     (iterator: FileWatcher) => {
       let events: Array<WatchEvent & { _id: string }> = [];
-      const watcher = iterator.fs.watch(sourcePath);
+      const watcher = iterator.fs.watchFs(sourcePath);
       const srcIterator: IterableIterator<WalkEntry> = iterator.fs.walkSync(
         normalize(sourcePath),
       );
@@ -90,10 +90,10 @@ export function watchFs(options: WatcherOptions): FileWatcher {
        * @todo Consider removing possibly unnecessary spreads
        */
       function refreshSource() {
-        const snapshot = [...new Set([...iterator.contents])];
+        const snapshot = [...new Set(iterator.contents)];
         const srcIterator = iterator.fs.walkSync(normalize(sourcePath));
         const entries = toArraySync<WalkEntry>(srcIterator);
-        iterator.contents = [...new Set([...entries])];
+        iterator.contents = [...new Set(entries)];
         const addedEntries = diff(entries, snapshot);
         const removedEntries = diff(snapshot, entries);
         for (let index = 0; index < removedEntries.length; index++) {
@@ -182,8 +182,6 @@ export function watchFs(options: WatcherOptions): FileWatcher {
             } else {
               if (entry?.isFile) {
                 if (iterator.fs.existsSync(normalize(entry.path))) {
-                  // These file/metadata change events may happen in groups,
-                  // especially when using GUIs, thus require being de-duplicated.
                   events.push({ _id: randomId(), kind: event.kind, entry });
                 } else {
                   // Most likely a file being renamed

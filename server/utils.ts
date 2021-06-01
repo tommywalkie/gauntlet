@@ -7,5 +7,5 @@ export const DenoFileSystem: FileSystemLike = {
   lstatSync: Deno.lstatSync,
   readFileSync: Deno.readFileSync,
   walkSync,
-  watch: Deno.watchFs,
+  watchFs: Deno.watchFs,
 };

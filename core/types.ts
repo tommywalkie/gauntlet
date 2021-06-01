@@ -59,7 +59,7 @@ export interface FileSystemLike {
   existsSync: (path: string) => boolean;
   lstatSync: (path: string) => Omit<Omit<WalkEntry, "name">, "path">;
   walkSync: (currentPath: string) => IterableIterator<WalkEntry>;
-  watch: (
+  watchFs: (
     paths: string | string[],
     ...options: any | undefined
   ) => AsyncIterableIterator<FsEvent>;
