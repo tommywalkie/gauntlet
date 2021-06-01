@@ -31,11 +31,11 @@ Gauntlet core modules include:
 
 - **File watcher** (`core/watcher`): Provides a bare-bones file watcher, given a `FileSystemLike` object as parameter.
 - **Compiler** (`core/compiler`): Provides a build pipeline which listens to file watchers' events, run the appropriate plugins and save outputs, given one or many file watchers and some configuration object as parameters.
-- **Virtual filesystem** (`core/fs`): Provides a `FileSystemLike` compliant virtual filesystem implentation.
+- **Virtual filesystem** (`core/fs`): Provides a [`FileSystemLike`](https://github.com/tommywalkie/gauntlet/tree/main/core#filesystemlike) compliant virtual filesystem implentation.
 
 ### FileSystemLike
 
-By design, aforementionned modules are based on top of a `FileSystemLike` object (available in `src/core/types.ts`), which needs only a couple of filesystem methods, which can be either Deno APIs or anything else, including self-made filesystems, like the one provided by Gauntlet.
+By design, aforementionned modules are based on top of a `FileSystemLike` object (defined in `core/types.ts`), which needs only a couple of filesystem methods, which can be either Deno APIs or anything else, including self-made filesystems.
 
 **Neither the compiler nor the file watcher will write into the disk**, outputting build results is all on the development server or whatever system making use of Gauntlet core modules. 
 
@@ -43,9 +43,9 @@ By design, aforementionned modules are based on top of a `FileSystemLike` object
 export interface FileSystemLike {
   /* To get the current working directory */
   cwd: () => string
-  /* To track if an item exists */
+  /* To track if an item exists, should support relative paths */
   existsSync: (path: string) => boolean
-  /* To retrieve item stats */
+  /* To retrieve item stats, should support relative paths */
   lstatSync: (path: string) => {
     isFile: boolean;
     isDirectory: boolean;
@@ -53,7 +53,7 @@ export interface FileSystemLike {
   }
   /* To get the file content, currently needed for the compiler */
   readFileSync: (path: string | URL) => Uint8Array
-  /* To walk a folder and list items */
+  /* To walk a folder and list items, should support relative paths */
   walkSync: (currentPath: string) => IterableIterator<{
     path: string,
     name: string;
