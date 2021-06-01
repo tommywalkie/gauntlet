@@ -7,6 +7,9 @@
 # just a folder for experimental stuff
 /experimental
 
+# Test coverage
+/.coverage
+
 # cli commands
 /commands
 

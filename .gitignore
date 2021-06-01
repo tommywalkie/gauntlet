@@ -10,6 +10,9 @@
 # just a folder for experimental stuff
 /experimental
 
+# Test coverage
+/.coverage
+
 # pnpm
 pnpm-lock.yaml
 .pnpm-debug.log

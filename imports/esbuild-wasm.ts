@@ -1,12 +1,12 @@
-// @deno-types="https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.1/esm/browser.d.ts"
-import * as esbuildWasm from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.1/esm/browser.min.js";
+// @deno-types="https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.5/esm/browser.d.ts"
+import * as esbuildWasm from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.5/esm/browser.min.js";
 import type {
   TransformFailure,
   TransformOptions,
   TransformResult,
-} from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.1/esm/browser.d.ts";
+} from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.5/esm/browser.d.ts";
 
-let ___READY = false;
+let READY = false;
 
 export type EsbuildResult =
   | TransformResult
@@ -16,7 +16,7 @@ export async function transform(
   input: string,
   options?: TransformOptions,
 ): Promise<EsbuildResult> {
-  if (!___READY) {
+  if (!READY) {
     throw new Error("esbuild not initialized.");
   }
   options = options ?? {};
@@ -24,16 +24,16 @@ export async function transform(
     format: "esm",
     loader: "tsx",
     ...options,
-  } as TransformOptions).catch((_: TransformFailure) => _);
+  }).catch((_: TransformFailure) => _);
   return result;
 }
 
 export async function initialize() {
-  if (___READY) return;
+  if (READY) return;
   return await esbuildWasm.initialize({
     worker: false,
-    wasmURL: "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.1/esbuild.wasm",
-  }).then(() => ___READY = true);
+    wasmURL: "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.5/esbuild.wasm",
+  }).then(() => READY = true);
 }
 
 export function stop() {

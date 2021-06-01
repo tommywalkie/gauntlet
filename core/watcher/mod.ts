@@ -220,7 +220,7 @@ export function watchFs(options: WatcherOptions): FileWatcher {
           // a "create" and a "modify" event.
           //
           // The idea is to keep track of file saves ("modify" events),
-          // WHILE ignoring the ones emitted on file creations. 
+          // WHILE ignoring the ones emitted on file creations.
           const creations = new Map<string, string>();
           for (let index = 0; index < snapshot.length; index++) {
             const event = snapshot[index];
@@ -239,7 +239,7 @@ export function watchFs(options: WatcherOptions): FileWatcher {
           // Using the earlier map, we can filter off the aforementionned events.
           const toBeIgnoredModifyEvents = [...creations.values()];
           const step1 = snapshot.filter((el) => {
-            return !toBeIgnoredModifyEvents.includes(el._id)
+            return !toBeIgnoredModifyEvents.includes(el._id);
           });
           // Now, we can safely de-duplicate events.
           const step2 = step1.filter(

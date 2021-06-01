@@ -1,5 +1,6 @@
 // @deno-types="https://deno.land/x/esbuild@v0.12.1/mod.d.ts"
 import {
+  build,
   initialize,
   stop,
   transform,
@@ -27,5 +28,5 @@ export type {
   TransformResult,
 };
 
-export { initialize, stop, transform };
-export default { transform, stop, initialize };
+export { build, initialize, stop, transform };
+export default { transform, stop, initialize, build };

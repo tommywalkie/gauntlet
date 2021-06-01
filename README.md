@@ -23,7 +23,7 @@
 
 ## Overview
 
-Gauntlet is a _work-in-progress_ naive and fast ES Modules powered frontend tool based on ESBuild, intended for Deno or the browser.
+Gauntlet is a _work-in-progress_ naive and fast ES Modules powered frontend tool based on ESBuild, intended for Deno and the browser.
 
 ## Goals
 

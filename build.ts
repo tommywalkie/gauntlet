@@ -18,10 +18,12 @@ if (!('Symbol' in self && 'asyncIterator' in self.Symbol)) {
   Deno.mkdirSync(distDir, { recursive: true });
 
   // ESM build
-  const { files } = await Deno.emit("./core/mod.ts", {
+  const build = await Deno.emit("./core/mod.ts", {
     bundle: "module",
   });
-  const output = `${asyncIteratorPolyfill}\n\n${files["deno:///bundle.js"]}`;
+  const output = `${asyncIteratorPolyfill}\n\n${
+    build.files["deno:///bundle.js"]
+  }`;
   Deno.writeTextFileSync("./dist/index.mjs", output);
 
   // CJS build

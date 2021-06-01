@@ -6,6 +6,16 @@ it("can set up a filesystem", () => {
   expect(fs.getRoot().length).toBe(0);
 });
 
+it("can get current filesystem size", () => {
+  const fs = createVirtualFileSystem<string>();
+  expect(fs.size).toBe(0);
+});
+
+it("can get current working directory in a filesystem", () => {
+  const fs = createVirtualFileSystem<string>();
+  expect(fs.cwd()).toBe("/");
+});
+
 it("can parse an absolute input filesystem path", () => {
   const fs = createVirtualFileSystem<string>();
   expect(fs.resolve("A/B\/C\\D")).toBe("/A/B/C/D");

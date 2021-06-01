@@ -2,29 +2,64 @@
 
 import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
 import { isAbsolute, join } from "../../imports/path.ts";
-import { FileWatcher } from "../watcher/mod.ts";
-import { VirtualFileSystem } from "../fs/mod.ts";
-import { toArraySync } from "../utils.ts";
 import {
   AsyncPushIterator,
   AsyncPushIteratorSetup,
 } from "../../imports/graphqlade.ts";
-import type { WatchEvents } from "../types.ts";
+import { FileWatcher } from "../watcher/mod.ts";
+import { VirtualFileSystem } from "../fs/mod.ts";
+import type { FileSystemLike, WalkEntry, WatchEvents } from "../types.ts";
 
 export interface CompilerEvent {
   kind: string;
   details: any;
 }
 
-export interface CompilerEntry {
+export interface FileExtensionInfo {
+  extension: string;
+  fullExtension: string;
+}
+
+export type Entry = WalkEntry & FileExtensionInfo & {
   mount: string;
-  path: string;
-  input?: string;
-  output?: string;
+};
+
+export interface ResolvedEntry extends Entry {
+  content: string;
+}
+
+export interface ComputedEntry extends ResolvedEntry {
+  outputs: ResolvedEntry[];
+}
+
+export type TransformContext = Entry & FileSystemLike;
+
+export interface TransformedFile {
+  code: string;
+  map?: string;
+}
+
+export type TransformResult = Record<string, TransformedFile>;
+
+export interface Plugin {
+  name: string;
+  onMount(): void;
+  onDestroy(): void;
+  resolve: {
+    input: string[];
+    output: string[];
+  };
+  transform(content: string, context: TransformContext): TransformResult;
+}
+
+export interface CompilerOptions {
+  watchers: FileWatcher[];
+  eventSource?: EventEmitter<WatchEvents>;
+  onError?: (err: Error) => void;
 }
 
 export class Compiler extends AsyncPushIterator<CompilerEvent> {
-  entries: Map<string, CompilerEntry> = new Map();
+  entries: Map<string, Entry> = new Map();
   fs: VirtualFileSystem = new VirtualFileSystem();
   plugins: any[] = [];
   watchers: FileWatcher[] = [];
@@ -32,12 +67,6 @@ export class Compiler extends AsyncPushIterator<CompilerEvent> {
   constructor(setup: (iterator: Compiler) => void) {
     super(setup as AsyncPushIteratorSetup<CompilerEvent>);
   }
-}
-
-export interface CompilerOptions {
-  watchers: FileWatcher[];
-  eventSource?: EventEmitter<WatchEvents>;
-  onError?: (err: Error) => void;
 }
 
 function formatPathConflictErrorMessage(
@@ -63,20 +92,43 @@ export class PathConflictError extends Error {
   }
 }
 
+export function getFileExtension(entry: WalkEntry): FileExtensionInfo {
+  if (entry.isDirectory) {
+    return {
+      extension: "",
+      fullExtension: "",
+    };
+  }
+  const parts = entry.name.split(".");
+  if (parts.length === 1) {
+    return {
+      extension: ".bin",
+      fullExtension: ".bin",
+    };
+  }
+  if (parts.length > 2) {
+    return {
+      extension: "." + parts[parts.length - 1],
+      fullExtension: "." + parts.splice(1, parts.length - 1).join("."),
+    };
+  }
+  return {
+    extension: "." + parts[parts.length - 1],
+    fullExtension: "." + parts[parts.length - 1],
+  };
+}
+
 export function setupCompiler(options: CompilerOptions) {
   // Initial build attempt
-  const initialMap = new Map();
-  for (let index = 0; index < options.watchers.length; index++) {
-    const watcher = options.watchers[index];
+  const initialMap: Map<string, Entry> = new Map();
+  for (const watcher of options.watchers) {
     const sourcePath = isAbsolute(watcher.mount)
       ? watcher.mount
       : join(watcher.fs.cwd(), watcher.mount);
-    const contents = toArraySync(watcher.fs.walkSync(sourcePath));
-    for (let index = 0; index < contents.length; index++) {
-      const element = contents[index];
-      if (element.isFile) {
-        const key = element.path.substr(sourcePath.length + 1);
-        const existingEntry = initialMap.get(key);
+    for (const content of watcher.fs.walkSync(sourcePath)) {
+      const key = content.path.substr(sourcePath.length + 1);
+      const existingEntry = initialMap.get(key);
+      if (content.isFile) {
         if (existingEntry) {
           throw new PathConflictError(
             join(watcher.mount, key),
@@ -84,13 +136,18 @@ export function setupCompiler(options: CompilerOptions) {
             key,
           );
         }
-        initialMap.set(key, { mount: watcher.mount, path: element.path });
       }
+      initialMap.set(key, {
+        mount: watcher.mount,
+        ...getFileExtension(content),
+        ...content,
+      });
     }
   }
 
   function terminate(err: Error) {
     if (options.onError) options.onError(err);
+    throw err;
   }
 
   // The actual compiler event iterator
@@ -112,7 +169,8 @@ export function setupCompiler(options: CompilerOptions) {
               const key = event.entry.path.substr(sourcePath.length + 1);
               iterator.entries.set(key, {
                 mount: watcher.mount,
-                path: event.entry.path,
+                ...getFileExtension(event.entry),
+                ...event.entry,
               });
             }
             if (event.kind === "create") {
@@ -129,7 +187,8 @@ export function setupCompiler(options: CompilerOptions) {
               } else {
                 iterator.entries.set(key, {
                   mount: watcher.mount,
-                  path: event.entry.path,
+                  ...getFileExtension(event.entry),
+                  ...event.entry,
                 });
               }
             }

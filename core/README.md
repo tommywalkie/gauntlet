@@ -29,9 +29,9 @@ _*_ iOS Safari doesn't support [Symbol.asyncIterator](https://caniuse.com/mdn-ja
 
 Gauntlet core modules include:
 
-- **File watcher** (`core/watcher`): Provides a bare-bones file watcher, given a `FileSystemLike` object as parameter.
+- [**File watcher**](https://github.com/tommywalkie/gauntlet/tree/main/core/watcher) (`core/watcher`): Provides a bare-bones file watcher, given a `FileSystemLike` object as parameter.
 - **Compiler** (`core/compiler`): Provides a build pipeline which listens to file watchers' events, run the appropriate plugins and save outputs, given one or many file watchers and some configuration object as parameters.
-- **Virtual filesystem** (`core/fs`): Provides a [`FileSystemLike`](https://github.com/tommywalkie/gauntlet/tree/main/core#filesystemlike) compliant virtual filesystem implentation.
+- [**Virtual filesystem**](https://github.com/tommywalkie/gauntlet/tree/main/core/fs) (`core/fs`): Provides a [`FileSystemLike`](https://github.com/tommywalkie/gauntlet/tree/main/core#filesystemlike) compliant virtual filesystem implentation.
 
 ### FileSystemLike
 
