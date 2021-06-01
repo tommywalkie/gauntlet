@@ -14,7 +14,7 @@
 
 Provides a battle-tested and event-driven virtual filesystem implementation, built on top of [`simple-virtual-fs`](https://github.com/deebloo/virtual-fs) by Danny Blue (**@deebloo**), including various convenient methods, inspired from Deno APIs.
 
-This filesystem is compliant with Gauntlet's `FileSystemLike` interface and implements most methods found in filesystem modules, while also supporting relative and absolute paths as inputs.
+This filesystem is compliant with Gauntlet's [`FileSystemLike`](https://github.com/tommywalkie/gauntlet/tree/main/core#filesystemlike) interface and implements most methods found in filesystem modules, while also supporting relative and absolute paths as inputs.
 
 - [Usage](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#usage)
   - [Create a new filesystem](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#create-a-new-filesystem)

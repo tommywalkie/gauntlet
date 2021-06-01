@@ -18,7 +18,7 @@ This is currently designed for tools which heavily rely on tracking and processi
 
 ## Usage
 
-Provided that you have an adequate `FileSystemLike` interface; notably implementing `watch`, `walkSync`, `existsSync`, `lstatSync` and `cwd`; you can start watching for / iterating filesystem events.
+Provided that you have an adequate [`FileSystemLike`](https://github.com/tommywalkie/gauntlet/tree/main/core#filesystemlike) interface; notably implementing `watch`, `walkSync`, `existsSync`, `lstatSync` and `cwd`; you can start watching for / iterating filesystem events.
 
 ```typescript
 import { watchFs } from "https://deno.land/x/gauntlet@0.1.0/mod.ts";
@@ -27,7 +27,7 @@ import { existsSync, walkSync } from "https://deno.land/std@0.97.0/fs/mod.ts";
 const watcher = watchFs({
   source: "./src",
   fs: {
-  	cwd: Deno.cwd,
+    cwd: Deno.cwd,
     existsSync,
     lstatSync: Deno.lstatSync,
     readFileSync: Deno.readFileSync,
