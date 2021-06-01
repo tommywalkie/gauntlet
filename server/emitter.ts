@@ -1,13 +1,5 @@
 import { EventEmitter } from "../imports/pietile-eventemitter.ts";
-import {
-  blue,
-  bold,
-  cyan,
-  gray,
-  green,
-  red,
-  yellow,
-} from "../imports/std.ts";
+import { blue, bold, cyan, gray, green, red, yellow } from "../imports/std.ts";
 import { normalize } from "../imports/path.ts";
 import { WalkEntry } from "../core/types.ts";
 import type { DevServerEvents } from "./types.ts";

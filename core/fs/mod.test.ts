@@ -600,13 +600,13 @@ it("can walk folder items asynchronously in a filesystem", async () => {
 it("cannot walk a file synchronously in a filesystem", () => {
   const fs = createVirtualFileSystem<string>();
   fs.writeSync("A.txt", "hello world");
-  let err
+  let err;
   try {
     for (const _ of fs.walkSync("A.txt")) {
       // Should throw an error
     }
   } catch (error) {
-    err = error
+    err = error;
   }
   expect(err).toBeTruthy();
 });
@@ -614,13 +614,13 @@ it("cannot walk a file synchronously in a filesystem", () => {
 it("cannot walk a file asynchronously in a filesystem", async () => {
   const fs = createVirtualFileSystem<string>();
   await fs.write("A.txt", "hello world");
-  let err
+  let err;
   try {
     for await (const _ of fs.walk("A.txt")) {
       // Should throw an error
     }
   } catch (error) {
-    err = error
+    err = error;
   }
   expect(err).toBeTruthy();
 });

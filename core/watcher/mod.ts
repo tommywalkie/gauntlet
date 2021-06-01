@@ -222,7 +222,19 @@ export function watchFs(options: WatcherOptions): FileWatcher {
                 (a: WatchEvent) =>
                   a.kind === e.kind && a.entry.path === e.entry.path,
               ) === i,
-          );
+          ).filter((e: WatchEvent, i) => {
+            if (i > 0) {
+              if (
+                e.kind === "modify" &&
+                snapshot[i - 1].kind === "create" &&
+                e.entry === snapshot[i - 1].entry
+              ) {
+                return false;
+              }
+              return true;
+            }
+            return true;
+          });
           for (let index = 0; index < set.length; index++) {
             const event = set[index];
             if (!handledIds.includes(event._id)) {

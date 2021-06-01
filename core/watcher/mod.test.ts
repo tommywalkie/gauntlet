@@ -28,7 +28,7 @@ async function exec(fn: (path: string) => void) {
     // Safely dispose ressources.
     clearTimeout(emergencyStop);
     watcher.return();
-  }
+  };
 
   // MacOS filesystem ops are VERY slow, at least on Github machines,
   // so we need to wait a bit before starting watching a folder
@@ -50,8 +50,7 @@ async function exec(fn: (path: string) => void) {
       // Got new event! Override the previously set timeout.
       clearTimeout(currentTimeout);
       currentTimeout = setTimeout(dispose, 120);
-    }
-    else {
+    } else {
       // Exec tasks and start waiting until no more event happens..
       fn(source);
       currentTimeout = setTimeout(dispose, 500);
@@ -77,59 +76,7 @@ it("should be able to track newly added files", async () => {
     Deno.writeTextFileSync(join(path, "E.txt"), "Hello world");
     Deno.writeTextFileSync(join(path, "F.txt"), "Hello world");
   });
-  expect(events[0].kind).toBe("watch");
-  expect(events.length).toBe(13);
-});
-
-it("should be able to track newly added files", async () => {
-  const events = await exec((path) => {
-    Deno.writeTextFileSync(join(path, "A.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "B.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "C.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "D.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "E.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "F.txt"), "Hello world");
-  });
-  expect(events[0].kind).toBe("watch");
-  expect(events.length).toBe(13);
-});
-
-it("should be able to track newly added files", async () => {
-  const events = await exec((path) => {
-    Deno.writeTextFileSync(join(path, "A.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "B.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "C.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "D.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "E.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "F.txt"), "Hello world");
-  });
-  expect(events[0].kind).toBe("watch");
-  expect(events.length).toBe(13);
-});
-
-it("should be able to track newly added files", async () => {
-  const events = await exec((path) => {
-    Deno.writeTextFileSync(join(path, "A.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "B.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "C.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "D.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "E.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "F.txt"), "Hello world");
-  });
-  expect(events[0].kind).toBe("watch");
-  expect(events.length).toBe(13);
-});
-
-it("should be able to track newly added files", async () => {
-  const events = await exec((path) => {
-    Deno.writeTextFileSync(join(path, "A.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "B.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "C.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "D.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "E.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "F.txt"), "Hello world");
-  });
   console.log(events);
   expect(events[0].kind).toBe("watch");
-  expect(events.length).toBe(13);
+  expect(events.length).toBe(7);
 });

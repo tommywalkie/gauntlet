@@ -132,7 +132,7 @@ The Gauntlet file watcher strives to leverage aforementionned quirks as efficien
 
 - All emitted events provide `Deno.WalkEntry`-like data as parameter. 
 - Emits a `watch` event when the file watcher is ready.
-- Emits a `create` event and then a `modify` event for any newly added file.
+- Emits a `create` event event for any newly added file (empty or not).
 - Emits a `modify` event for any file save.
 - Emits a `remove` event and then a `create` event for any renamed file.
 - Emits a `remove` event for every file inside a folder being removed.

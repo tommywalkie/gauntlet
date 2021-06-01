@@ -383,7 +383,7 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents>
    * must be absolute and not be already registered in contents.
    * @private
    */
-   private _copy(entry: Item<T>, to: string) {
+  private _copy(entry: Item<T>, to: string) {
     if (entry.isDirectory) {
       this.mkdirSync(to);
     }
