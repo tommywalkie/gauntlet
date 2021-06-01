@@ -71,12 +71,8 @@ it("should be able to track newly added files", async () => {
   const events = await exec((path) => {
     Deno.writeTextFileSync(join(path, "A.txt"), "Hello world");
     Deno.writeTextFileSync(join(path, "B.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "C.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "D.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "E.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "F.txt"), "Hello world");
+    Deno.writeTextFileSync(join(path, "A.txt"), "Editted my hello world");
   });
-  console.log(events);
   expect(events[0].kind).toBe("watch");
-  expect(events.length).toBe(7);
+  expect(events.length).toBe(4);
 });

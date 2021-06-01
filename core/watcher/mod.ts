@@ -118,7 +118,7 @@ export function watchFs(options: WatcherOptions): FileWatcher {
 
       /**
        * Process and filter `FsEvent` events,
-       * by performing checks and
+       * by performing a couple of checks
        *
        * @todo Consider optimizing folder deletion event handling.
        * In theory, folder deletion events happen after folder item deletion
@@ -127,9 +127,8 @@ export function watchFs(options: WatcherOptions): FileWatcher {
        * though using refreshSource may be overkill.
        */
       function handleEvent(event: FsEvent) {
-        if (Deno.build.os === "linux") console.log(event);
         // We could listen to inotify events including two paths,
-        // but due to the fact they happen after many related modify events,
+        // but due to the fact they always happen last among modify events,
         // they become noise.
         if (event.paths.length === 1) {
           const path = event.paths[0];
@@ -212,31 +211,49 @@ export function watchFs(options: WatcherOptions): FileWatcher {
       const handledIds: string[] = [];
       const pollEvents = setInterval(() => {
         if (events.length > 0) {
+          // First, we need to save events in a snapshot
+          // and clear our current state.
           const snapshot = [...events];
           events = events.filter((el) =>
             !snapshot.map((el) => el._id).includes(el._id)
           );
-          const set = snapshot.filter(
+          // Then, we need to need to keep track of
+          // created entries, which are supposed to emit both
+          // a "create" and a "modify" event.
+          //
+          // The idea is to keep track of file saves ("modify" events),
+          // WHILE ignoring the ones emitted on file creations. 
+          const creations = new Map<string, string>();
+          for (let index = 0; index < snapshot.length; index++) {
+            const event = snapshot[index];
+            if (event.kind === "create" && !creations.has(event.entry.path)) {
+              creations.set(event.entry.path, "");
+            }
+            if (event.kind === "modify") {
+              if (creations.has(event.entry.path)) {
+                const creation = creations.get(event.entry.path);
+                if (!creation || creation.length === 0) {
+                  creations.set(event.entry.path, event._id);
+                }
+              }
+            }
+          }
+          // Using the earlier map, we can filter off the aforementionned events.
+          const toBeIgnoredModifyEvents = [...creations.values()];
+          const step1 = snapshot.filter((el) => {
+            return !toBeIgnoredModifyEvents.includes(el._id)
+          });
+          // Now, we can safely de-duplicate events.
+          const step2 = step1.filter(
             (e: WatchEvent, i) =>
-              snapshot.findIndex(
+              step1.findIndex(
                 (a: WatchEvent) =>
                   a.kind === e.kind && a.entry.path === e.entry.path,
               ) === i,
-          ).filter((e: WatchEvent, i) => {
-            if (i > 0) {
-              if (
-                e.kind === "modify" &&
-                snapshot[i - 1].kind === "create" &&
-                e.entry === snapshot[i - 1].entry
-              ) {
-                return false;
-              }
-              return true;
-            }
-            return true;
-          });
-          for (let index = 0; index < set.length; index++) {
-            const event = set[index];
+          );
+          // Forward de-duplicated events.
+          for (let index = 0; index < step2.length; index++) {
+            const event = step2[index];
             if (!handledIds.includes(event._id)) {
               handledIds.push(event._id) && iterator.push(event);
             }
