@@ -127,6 +127,7 @@ export function watchFs(options: WatcherOptions): FileWatcher {
        * though using refreshSource may be overkill.
        */
       function handleEvent(event: FsEvent) {
+        if (Deno.build.os === "linux") console.log(event);
         // We could listen to inotify events including two paths,
         // but due to the fact they happen after many related modify events,
         // they become noise.
