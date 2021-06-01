@@ -27,6 +27,7 @@ This filesystem is compliant with Gauntlet's `FileSystemLike` interface and impl
   - [Get path stats](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#get-path-stats)
   - [Remove a file or a directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#remove-a-file-or-a-directory)
   - [Move a file or a directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#move-a-file-or-a-directory)
+  - [Copy a file or a directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#copy-a-file-or-a-directory)
   - [Rename a file or a directory](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#rename-a-file-or-a-directory)
   - [Watch for filesystem events](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#watch-for-filesystem-events)
   - [Map over filesystem items](https://github.com/tommywalkie/gauntlet/tree/main/core/fs#map-over-filesystem-items)
@@ -143,6 +144,26 @@ await fs.exists("some-dir/some-file"); // true
 await fs.move("some-dir", "/");
 await fs.exists("some-dir/some-file"); // false
 await fs.exists("some-file"); // true
+```
+
+### Copy a file or a directory
+
+Recursively copy all child paths. Throws an error if trying to override an existing path.
+
+```typescript
+// Synchronous
+fs.existsSync("some-dir/some-file"); // true
+fs.copySync("some-dir", "another-dir");
+fs.existsSync("some-dir/some-file"); // true
+fs.existsSync("another-dir"); // true
+fs.existsSync("another-dir/some-file"); // true
+
+// Asynchronous
+await fs.exists("some-dir/some-file"); // true
+await fs.copy("some-dir", "another-dir");
+await fs.exists("some-dir/some-file"); // true
+await fs.exists("another-dir"); // true
+await fs.exists("another-dir/some-file"); // true
 ```
 
 ### Rename a file or a directory

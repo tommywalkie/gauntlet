@@ -624,3 +624,59 @@ it("cannot walk a file asynchronously in a filesystem", async () => {
   }
   expect(err).toBeTruthy();
 });
+
+it("can copy a file synchronously in a filesystem", () => {
+  const fs = createVirtualFileSystem<string>();
+  fs.writeSync("A.txt", "hello world");
+  fs.copySync("A.txt", "B.txt");
+  expect(fs.existsSync("A.txt")).toBeTruthy();
+  expect(fs.existsSync("B.txt")).toBeTruthy();
+  expect(fs.readSync("B.txt")).toBe("hello world");
+});
+
+it("can copy a file asynchronously in a filesystem", async () => {
+  const fs = createVirtualFileSystem<string>();
+  await fs.write("A.txt", "hello world");
+  await fs.copy("A.txt", "B.txt");
+  expect(fs.exists("A.txt")).resolves.toBeTruthy();
+  expect(fs.exists("B.txt")).resolves.toBeTruthy();
+  expect(fs.read("B.txt")).resolves.toBe("hello world");
+});
+
+it("can copy folders synchronously in a filesystem", () => {
+  const fs = createVirtualFileSystem<string>();
+  fs.mkdirSync("A");
+  fs.writeSync("A/B.txt", "hello world");
+  fs.mkdirSync("A/C");
+  fs.writeSync("A/C/D.txt", "foo");
+  fs.copySync("A", "E");
+  expect(fs.existsSync("A/B.txt")).toBeTruthy();
+  expect(fs.existsSync("A/C/D.txt")).toBeTruthy();
+  expect(fs.existsSync("E/B.txt")).toBeTruthy();
+  expect(fs.existsSync("E/C/D.txt")).toBeTruthy();
+  expect(fs.readSync("E/C/D.txt")).toBe("foo");
+});
+
+it("can copy folders asynchronously in a filesystem", async () => {
+  const fs = createVirtualFileSystem<string>();
+  await fs.mkdir("A");
+  await fs.write("A/B.txt", "hello world");
+  await fs.mkdir("A/C");
+  await fs.write("A/C/D.txt", "foo");
+  await fs.copy("A", "E");
+  expect(fs.exists("A/B.txt")).resolves.toBeTruthy();
+  expect(fs.exists("A/C/D.txt")).resolves.toBeTruthy();
+  expect(fs.exists("E/B.txt")).resolves.toBeTruthy();
+  expect(fs.exists("E/C/D.txt")).resolves.toBeTruthy();
+  expect(fs.read("E/C/D.txt")).resolves.toBe("foo");
+});
+
+it("cannot copy into an existing path in a filesystem", () => {
+  const fs = createVirtualFileSystem<string>();
+  fs.writeSync("A.txt", "hello world");
+  fs.writeSync("B.txt", "foo bar");
+  fs.mkdirSync("C");
+  fs.mkdirSync("D");
+  expect(() => fs.copySync("A.txt", "B.txt")).toThrow();
+  expect(() => fs.copySync("C", "D")).toThrow();
+});

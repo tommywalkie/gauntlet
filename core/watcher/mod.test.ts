@@ -20,14 +20,29 @@ function makeWatchableTempDir(): [string, FileWatcher] {
 async function exec(fn: (path: string) => void) {
   // Make a temporary directory for our test.
   const [source, watcher] = makeWatchableTempDir();
+  const maxTimeout = Deno.build.os === "darwin" ? 8000 : 5000;
   // Stop the watcher if 5 seconds have passed, if still active..
-  const emergencyStop = setTimeout(() => watcher.return(), 5000);
+  const emergencyStop = setTimeout(() => watcher.return(), maxTimeout);
   const events = [];
   const dispose = () => {
     // Safely dispose ressources.
     clearTimeout(emergencyStop);
     watcher.return();
   }
+
+  // MacOS filesystem ops are VERY slow, at least on Github machines,
+  // so we need to wait a bit before starting watching a folder
+  // that may not be completely created.
+  if (Deno.build.os === "darwin") {
+    let i = 0;
+    while (i < 5e3) {
+      if ((i % 100) === 0) {
+        if (existsSync(source)) break;
+      }
+      i++;
+    }
+  }
+
   let currentTimeout;
   for await (const event of watcher) {
     events.push(event);
@@ -114,6 +129,7 @@ it("should be able to track newly added files", async () => {
     Deno.writeTextFileSync(join(path, "E.txt"), "Hello world");
     Deno.writeTextFileSync(join(path, "F.txt"), "Hello world");
   });
+  console.log(events);
   expect(events[0].kind).toBe("watch");
   expect(events.length).toBe(13);
 });

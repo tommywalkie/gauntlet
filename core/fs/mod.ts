@@ -379,11 +379,11 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents>
   }
 
   /**
-   * Low-level item moving implementation, destination path
+   * Low-level item copying implementation, destination path
    * must be absolute and not be already registered in contents.
    * @private
    */
-  private _move(entry: Item<T>, to: string) {
+   private _copy(entry: Item<T>, to: string) {
     if (entry.isDirectory) {
       this.mkdirSync(to);
     }
@@ -401,6 +401,15 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents>
       isDirectory: entry.isDirectory,
       isSymlink: entry.isSymlink,
     });
+  }
+
+  /**
+   * Low-level item moving implementation, destination path
+   * must be absolute and not be already registered in contents.
+   * @private
+   */
+  private _move(entry: Item<T>, to: string) {
+    this._copy(entry, to);
     // Unlike the case earlier, calling `removeSync`
     // would recursively remove entries, and throw errors
     // when retrieving deleted folder items' stats.
@@ -499,6 +508,93 @@ export class FileSystem<T = any> extends EventEmitter<WatchEvents>
     try {
       // TODO(tommywalkie): Consider using promises instead of just wrapping moveSync()
       Promise.resolve(this.moveSync(from, to));
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  copySync(from: string, to: string) {
+    from = this.resolve(from);
+    to = this.resolve(to);
+    if (!this._exists(from)) {
+      throw new Error(`Cannot copy not found "${from}" path.`);
+    }
+    if (dirname(to).length > 0 && !this._exists(dirname(to))) {
+      throw new Error(
+        `Cannot copy "${from}" into invalid path "${to}", "${
+          dirname(to)
+        }" not found.`,
+      );
+    }
+    const fromStats = this._lstat(from);
+    if (this._exists(to)) {
+      throw new Error(
+        `Cannot copy "${from}" into an existing "${to}" path.`,
+      );
+    }
+    if (!this._exists(to) && fromStats.isDirectory && to !== "/") {
+      this.mkdirSync(to);
+    }
+
+    // Simulate root folder stats if needed, otherwise get destination stats as usual
+    let toStats: { isFile: boolean; isDirectory: boolean };
+    if (to === "/") {
+      toStats = { isFile: false, isDirectory: true };
+    } else {
+      if (this._exists(to)) {
+        toStats = this._lstat(to);
+        if (fromStats.isFile && toStats.isFile) {
+          throw new Error(
+            `Cannot copy "${from}" file into an existing "${to}" file.`,
+          );
+        }
+        if (fromStats.isDirectory && toStats.isFile) {
+          throw new Error(
+            `Cannot copy "${from}" directory into an existing "${to}" file.`,
+          );
+        }
+      } else {
+        toStats = {
+          isFile: fromStats.isFile,
+          isDirectory: fromStats.isDirectory,
+        };
+      }
+    }
+    if (fromStats.isDirectory && toStats.isDirectory) {
+      for (const item of this.getChildPaths(from)) {
+        const stats = this._lstat(item);
+        const destPath = format(join(to, item.substr(from.length + 1)));
+        if (stats.isDirectory) {
+          this._copy(
+            this.contents.get(item) as Directory,
+            destPath,
+          );
+        }
+        if (stats.isFile) {
+          if (this._exists(destPath)) {
+            throw new Error(
+              `Cannot override existing "${destPath}" file while copying "${from}" directory into "${to}".`,
+            );
+          }
+          this._copy(
+            this.contents.get(item) as Document<T>,
+            destPath,
+          );
+        }
+      }
+    }
+    if (fromStats.isFile && toStats.isFile) {
+      this._copy(
+        this.contents.get(from) as Document<T>,
+        to,
+      );
+    }
+  }
+
+  copy(from: string, to: string) {
+    try {
+      // TODO(tommywalkie): Consider using promises instead of just wrapping moveSync()
+      Promise.resolve(this.copySync(from, to));
     } catch (e) {
       return Promise.reject(e);
     }
