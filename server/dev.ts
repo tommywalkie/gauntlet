@@ -1,5 +1,3 @@
-// deno-lint-ignore-file no-explicit-any
-
 import {
   AsyncPushIterator,
   AsyncPushIteratorSetup,
@@ -13,10 +11,11 @@ import {
 } from "../core/mod.ts";
 import { EventEmitter } from "../imports/pietile-eventemitter.ts";
 import { HTTPOptions, serve, Server } from "../imports/std.ts";
-import { default as esbuild } from "../imports/esbuild.ts";
+import esbuildPlugin from "../plugins/esbuild.ts";
+import esbuildWasmPlugin from "../plugins/esbuild-wasm.ts";
 import { DenoFileSystem } from "./utils.ts";
-import type { DevServerEvents, Disposable } from "./types.ts";
-import type { EsbuildInstance } from "../imports/esbuild.ts";
+import type { AsyncDisposable, DevServerEvents, Disposable } from "./types.ts";
+import type { Plugin } from "../core/types.ts";
 
 type DevServerSetup<T> = (
   iterator: DevServer<T>,
@@ -35,6 +34,7 @@ export interface DevServerOptions {
   port: number;
   mounts: string[];
   eventSource?: EventEmitter<DevServerEvents>;
+  plugins?: Plugin[];
 }
 
 function initServer(addr: string | HTTPOptions): Disposable<Server> {
@@ -45,31 +45,26 @@ function initServer(addr: string | HTTPOptions): Disposable<Server> {
   return [server, () => server.close()];
 }
 
-function initESBuild(
-  eventSource?: EventEmitter<DevServerEvents>,
-): Disposable<EsbuildInstance> {
-  const instance = esbuild;
-  (async () =>
-    await esbuild.initialize({}).then(() => {
-      if (eventSource) {
-        eventSource.emit("debug", "ESBuild service is now running");
-      }
-    }))();
-  return [instance, () => instance.stop()];
-}
-
-function initCompiler(
+async function initCompiler(
   mounts: string[],
+  plugins: Plugin[],
   eventSource?: EventEmitter<DevServerEvents>,
   onError?: (err: Error) => void,
-): Disposable<Compiler> {
+): Promise<AsyncDisposable<Compiler>> {
   let watchers: FileWatcher[] = [];
   try {
     watchers = mounts.map((mount) => {
       return watchFs({ source: mount, fs: DenoFileSystem });
     });
-    const compiler = setupCompiler({ watchers, onError });
-    return [compiler, () => compiler.return()];
+    const compiler = await setupCompiler({
+      watchers,
+      onError,
+      eventSource,
+      plugins,
+    });
+    return [compiler, async () => {
+      await compiler.return();
+    }];
   } catch (e) {
     if (eventSource) eventSource.emit("error", `${e.name}: ${e.message}`);
     if (eventSource) eventSource.emit("terminate");
@@ -77,30 +72,39 @@ function initCompiler(
   }
 }
 
-export function runDevServer(options: DevServerOptions = {
+export async function runServer(options: DevServerOptions = {
   port: 8000,
   mounts: [Deno.cwd()],
+  plugins: [esbuildPlugin],
 }) {
+  const threads: number[] = [];
+  if (!options.plugins) {
+    options.plugins = [
+      esbuildWasmPlugin,
+      esbuildWasmPlugin,
+      esbuildPlugin,
+      esbuildWasmPlugin,
+    ];
+  }
   try {
     const eventSource = options.eventSource;
-
-    const [compiler, disposeCompiler] = initCompiler(
+    const [compiler, disposeCompiler] = await initCompiler(
       options.mounts,
+      options.plugins,
       eventSource,
-      (e: Error) => terminate(e),
+      async (e: Error) => await terminate(e),
     );
     const [server, disposeServer] = initServer({ port: options.port });
-    const [_esbuildInstance, disposeEsbuild] = initESBuild(eventSource);
 
-    const terminate = (err?: Error) => {
+    const terminate = async (err?: Error) => {
       if (err && eventSource) {
         eventSource.emit("error", `${err.name}: ${err.message}`);
       }
-      disposeEsbuild();
-      if (eventSource) {
-        eventSource.emit("debug", "Gracefully stopped the ESBuild service");
+      await disposeCompiler();
+      for (let index = 0; index < threads.length; index++) {
+        const element = threads[index];
+        clearTimeout(element);
       }
-      disposeCompiler();
       disposeServer();
       if (eventSource) eventSource.emit("terminate");
       Deno.exit(1);
@@ -111,11 +115,11 @@ export function runDevServer(options: DevServerOptions = {
       // https://github.com/denoland/deno/issues/9995
       if (Deno.build.os === "windows") {
         const { setHandler } = await import("../imports/ctrlc.ts");
-        setHandler(() => {
+        setHandler(async () => {
           if (eventSource) {
             eventSource.emit("debug", "Intercepted SIGINT signal");
           }
-          terminate();
+          await terminate();
         });
       } else {
         // Otherwise, if using UNIX, listen to Deno.signal
@@ -123,13 +127,14 @@ export function runDevServer(options: DevServerOptions = {
           if (eventSource) {
             eventSource.emit("debug", "Intercepted SIGINT signal");
           }
-          terminate();
+          await terminate();
         }
       }
     };
 
+    // deno-lint-ignore no-explicit-any
     return new DevServer<CompilerEvent | { kind: string; details: any }>(
-      (iterator) => {
+      async (iterator) => {
         try {
           if (eventSource) {
             eventSource.emit("listen", {
@@ -139,7 +144,7 @@ export function runDevServer(options: DevServerOptions = {
             });
           }
 
-          setTimeout(async () => {
+          threads.push(setTimeout(async () => {
             try {
               for await (const event of iterator.compiler) {
                 if (eventSource) {
@@ -151,31 +156,38 @@ export function runDevServer(options: DevServerOptions = {
                 iterator.push(event);
               }
             } catch (e) {
-              terminate(e);
+              await terminate(e);
             }
-          });
+          }));
 
-          setTimeout(async () => {
+          threads.push(setTimeout(async () => {
             for await (const request of server) {
               iterator.push({ kind: "request", details: request });
               request.respond({ status: 200, body: "hello world" });
             }
-          });
+          }));
 
-          (async function () {
-            await gracefulExit();
-          })();
+          await gracefulExit();
         } catch (e) {
-          terminate(e);
+          await terminate(e);
         }
-        return () => iterator.compiler.return();
+        return async () => {
+          for (let index = 0; index < threads.length; index++) {
+            const element = threads[index];
+            clearTimeout(element);
+          }
+          await iterator.compiler.return();
+        };
       },
       compiler,
     );
   } catch (e) {
-    esbuild.stop();
     if (options.eventSource) {
-      options.eventSource.emit("fatal", `${e.name}: ${e.message}`);
+      options.eventSource.emit(
+        "fatal",
+        "The following error occured at the development server root.\n" +
+          "Consider raising an issue on https://github.com/tommywalkie/gauntlet/issues.",
+      );
     }
     console.error(e);
     Deno.exit(1);

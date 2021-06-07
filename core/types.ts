@@ -80,3 +80,66 @@ export interface VirtualFileSystemEvent {
   kind: FsEventKind | "rename";
   paths: string[];
 }
+
+export interface FileExtensionInfo {
+  extension: string;
+  fullExtension: string;
+}
+
+export type Entry = WalkEntry & FileExtensionInfo & {
+  mount: string;
+  relativePath: string;
+};
+
+export interface ResolvedEntry extends Entry {
+  content: string;
+}
+
+export interface ComputedEntry extends ResolvedEntry {
+  outputs: ResolvedEntry[];
+}
+
+export type PluginHookContext = Entry & FileSystemLike;
+
+export type Context = Entry & FileSystemLike;
+
+export type Computed<T extends string> =
+  | {
+    [key in T]: string;
+  }
+  | Promise<
+    {
+      [key in T]: string;
+    }
+  >;
+
+export type PluginResult<T extends string> = Computed<T>;
+
+export interface Plugin<
+  T extends string = string,
+  K extends string = string,
+  U = string,
+> {
+  name: string;
+  onMount?(): void | Promise<void>;
+  onDestroy?(): void | Promise<void>;
+  onError?(err: Error, context: Context): void | Promise<void>;
+  onBuild?(result: Computed<K>, context: Context): void | Promise<void>;
+  resolve: {
+    input: Array<T>;
+    output: Array<K>;
+  };
+  load?(path: string, context: Context): U | Promise<U>;
+  transform: (
+    content: U,
+    context: Context,
+  ) =>
+    | {
+      [key in K]: string;
+    }
+    | Promise<
+      {
+        [key in K]: string;
+      }
+    >;
+}

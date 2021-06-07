@@ -1,6 +1,3 @@
-# file watching tests
-/__TEST__
-
 # continuous integration
 /.github
 

@@ -1,1 +1,4 @@
-export { interpret, Machine } from "https://esm.sh/xstate@4.19.1";
+export {
+  interpret as interpretMachine,
+  Machine,
+} from "https://esm.sh/xstate@4.19.1";

@@ -1,5 +1,3 @@
-// deno-lint-ignore-file
-
 import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
 import { isAbsolute, join } from "../../imports/path.ts";
 import {
@@ -8,60 +6,32 @@ import {
 } from "../../imports/graphqlade.ts";
 import { FileWatcher } from "../watcher/mod.ts";
 import { VirtualFileSystem } from "../fs/mod.ts";
-import type { FileSystemLike, WalkEntry, WatchEvents } from "../types.ts";
+import type {
+  Entry,
+  FileExtensionInfo,
+  LogEvents,
+  Plugin,
+  WalkEntry,
+  WatchEvents,
+} from "../types.ts";
 
 export interface CompilerEvent {
   kind: string;
+  // deno-lint-ignore no-explicit-any
   details: any;
-}
-
-export interface FileExtensionInfo {
-  extension: string;
-  fullExtension: string;
-}
-
-export type Entry = WalkEntry & FileExtensionInfo & {
-  mount: string;
-};
-
-export interface ResolvedEntry extends Entry {
-  content: string;
-}
-
-export interface ComputedEntry extends ResolvedEntry {
-  outputs: ResolvedEntry[];
-}
-
-export type TransformContext = Entry & FileSystemLike;
-
-export interface TransformedFile {
-  code: string;
-  map?: string;
-}
-
-export type TransformResult = Record<string, TransformedFile>;
-
-export interface Plugin {
-  name: string;
-  onMount(): void;
-  onDestroy(): void;
-  resolve: {
-    input: string[];
-    output: string[];
-  };
-  transform(content: string, context: TransformContext): TransformResult;
 }
 
 export interface CompilerOptions {
   watchers: FileWatcher[];
-  eventSource?: EventEmitter<WatchEvents>;
+  plugins?: Plugin[];
+  eventSource?: EventEmitter<WatchEvents & LogEvents>;
   onError?: (err: Error) => void;
 }
 
 export class Compiler extends AsyncPushIterator<CompilerEvent> {
   entries: Map<string, Entry> = new Map();
   fs: VirtualFileSystem = new VirtualFileSystem();
-  plugins: any[] = [];
+  plugins: Plugin[] = [];
   watchers: FileWatcher[] = [];
 
   constructor(setup: (iterator: Compiler) => void) {
@@ -118,9 +88,13 @@ export function getFileExtension(entry: WalkEntry): FileExtensionInfo {
   };
 }
 
-export function setupCompiler(options: CompilerOptions) {
+export async function setupCompiler(options: CompilerOptions) {
   // Initial build attempt
   const initialMap: Map<string, Entry> = new Map();
+  const plugins: Plugin[] = [];
+
+  if (!options.plugins) options.plugins = [];
+
   for (const watcher of options.watchers) {
     const sourcePath = isAbsolute(watcher.mount)
       ? watcher.mount
@@ -139,9 +113,24 @@ export function setupCompiler(options: CompilerOptions) {
       }
       initialMap.set(key, {
         mount: watcher.mount,
+        relativePath: key,
         ...getFileExtension(content),
         ...content,
       });
+    }
+  }
+
+  for (let index = 0; index < options.plugins.length; index++) {
+    const plugin = options.plugins[index];
+    plugins.push(plugin);
+    if (plugin.onMount) {
+      if (options.eventSource) {
+        options.eventSource.emit(
+          "debug",
+          `Mounting "${plugin.name}" plugin`,
+        );
+      }
+      await plugin.onMount();
     }
   }
 
@@ -149,6 +138,8 @@ export function setupCompiler(options: CompilerOptions) {
     if (options.onError) options.onError(err);
     throw err;
   }
+
+  const threads: number[] = [];
 
   // The actual compiler event iterator
   return new Compiler((iterator: Compiler) => {
@@ -159,16 +150,14 @@ export function setupCompiler(options: CompilerOptions) {
         ? watcher.mount
         : join(watcher.fs.cwd(), watcher.mount);
 
-      setTimeout(async () => {
+      threads.push(setTimeout(async () => {
         try {
           for await (const event of watcher) {
-            if (options.eventSource) {
-              options.eventSource.emit(event.kind, event.entry);
-            }
             if (event.kind === "modify") {
               const key = event.entry.path.substr(sourcePath.length + 1);
               iterator.entries.set(key, {
                 mount: watcher.mount,
+                relativePath: key,
                 ...getFileExtension(event.entry),
                 ...event.entry,
               });
@@ -187,6 +176,7 @@ export function setupCompiler(options: CompilerOptions) {
               } else {
                 iterator.entries.set(key, {
                   mount: watcher.mount,
+                  relativePath: key,
                   ...getFileExtension(event.entry),
                   ...event.entry,
                 });
@@ -201,12 +191,32 @@ export function setupCompiler(options: CompilerOptions) {
         } catch (e) {
           terminate(e);
         }
-      });
+      }));
     }
     return () => {
       for (let index = 0; index < options.watchers.length; index++) {
         const watcher = options.watchers[index];
         watcher.return();
+        clearTimeout(threads[index]);
+        if (options.eventSource) {
+          options.eventSource.emit(
+            "debug",
+            `Stopped watching "${watcher.mount}" path`,
+          );
+        }
+      }
+      for (const plugin of plugins) {
+        (async () => {
+          if (plugin.onDestroy) {
+            await plugin.onDestroy();
+            if (options.eventSource) {
+              options.eventSource.emit(
+                "debug",
+                `Unmounted "${plugin.name}" plugin`,
+              );
+            }
+          }
+        })();
       }
     };
   });

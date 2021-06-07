@@ -1,4 +1,5 @@
 <!-- deno-fmt-ignore-file -->
+
 # Contributing
 
 Welcome and thanks for your interest in contributing! Please read carefully through our guidelines below to ensure that your contribution adheres to our  project's standards.
@@ -29,8 +30,9 @@ git clone https://github.com/tommywalkie/gauntlet
 ### Prerequisites
 
 - Deno
-- Node 12+ (recommended for specific tests)
-- Any decent Markdown editor (recommended for docs)
+- Node 12+ (only for specific tests and NPM builds)
+- TypeScript 4.1+ (if using Node)
+- Any decent Markdown editor (only for docs)
 
 ### Usage
 
@@ -50,7 +52,7 @@ gauntlet dev      # Run the development server
 
 ## Project structure
 
-```bash
+```
 .
 ├─── .github        # Continuous integration
 ├─── commands       # Command-line program commands
@@ -68,36 +70,35 @@ gauntlet dev      # Run the development server
 Gauntlet is intended to be built upon, and extensible via plugins. Although the product is simple, various dependencies may be needed for different use cases, this is why some style rules need to be followed.
 
 - Avoid using any bare import mechanism.
-- Use 2-space indentation (or just use `deno fmt`).
+- Use two-space indentation (or just use `deno fmt`).
 - Modules inside `core/` shall be browser-compatible.
 - Modules inside `cli/` shall be browser-compatible.
 - Use `deno info <URL>` before adding any dependency.
 - Any dependency shall reside in its own file under `imports/`, [similarly to Meteor projects](https://guide.meteor.com/structure.html#javascript-structure).
 - Any dependency shall be versioned and providing types.
   - Prefer using [esm.sh](https://esm.sh/) wherever possible, which directly provide bundles and types.
-  - If using [jsDelivr](https://www.jsdelivr.com/), find types and use `// @deno-types="<module>.d.ts"`.
-  - If using [Skypack](https://www.skypack.dev/), try using `?dts` when requesting modules, otherwise, find types and use `// @deno-types="<module>.d.ts"`.
+  - For most alternatives, including [jsDelivr](https://www.jsdelivr.com/), you would have to find/define types yourself, using `// @deno-types="<module>.d.ts"`.
+  - If using [Skypack](https://www.skypack.dev/), try using `?dts` when requesting modules.
   - If using [`std`](https://deno.land/std), look for [browser-compatibility comments](https://deno.land/manual@v1.10.2/contributing/style_guide#document-and-maintain-browser-compatibility).
-  - If using Github raw files, use commit permalinks and find types and use `// @deno-types="<module>.d.ts"`.
+  - If using Github raw files, **use commit permalinks** to avoid broken links.
 - Avoid cyclic imports.
+- Ideally, typing files `**/*/types.ts` shall only contain interfaces and types, and shall not import scripts.
 
 ## Formatting
 
 Formatting is handled by Deno's [built-in formatter](https://deno.land/manual/tools/formatter#code-formatter), based on [dprint](https://dprint.dev/), the [default rules](https://dprint.dev/plugins/typescript/config/) notably include two spaces for indentation, double quotes by default, max 120 characters line width.
 
 ```shell
-deno fmt --ignore=dist          # Explicitly ignore NPM builds and auto-format files
-deno fmt --check --ignore=dist  # Explicitly ignore NPM builds, check and report errors
+deno fmt --ignore=dist           # Explicitly ignore NPM builds and auto-format files
+deno fmt --check --ignore=dist   # Explicitly ignore NPM builds, check and report errors
 ```
-
-### Formatting gotchas
 
 Unlike what the documentation mentions, given [this snippet](https://github.com/denoland/deno/blob/d69a5fbe1a4f909b7eba0eac81dd111fb7229232/cli/tools/fmt.rs#L155-L169), the Deno formatter actually covers :
 - TypeScript
 - JavaScript
 - JSX
 - JSON, JSONC
-- Markdown (HTML tags included, this can notably mess up Github badges)
+- Markdown (HTML tags included, _this can notably mess up badges!_)
 
 Therefore, don't forget to use ignore flags when appropriate. In Markdown, you would like to use:
 
@@ -113,12 +114,12 @@ While in actual scripts, you would use something like:
 
 ## Linting
 
-Linting is based on official [Deno linter](https://lint.deno.land/) rules.
+Linting is based on Deno's [built-in linter](https://lint.deno.land/), notably including [`no-explicit-any`](https://lint.deno.land/#no-explicit-any), [`no-inner-declarations`](https://lint.deno.land/#no-inner-declarations), [`camelcase`](https://lint.deno.land/#camelcase) and [`ban-ts-comment`](https://lint.deno.land/#ban-ts-comment) rules.
 
-You can [ignore rules](https://lint.deno.land/ignoring-rules) for a specific line or at the file level using `// deno-lint-ignore`.
+Thankfully, you can [ignore rules](https://lint.deno.land/ignoring-rules) for a specific line using `// deno-lint-ignore` or at the file level.
 
 ```shell
-deno lint --ignore=dist # Explicitly ignore NPM builds
+deno lint --ignore=dist   # Explicitly ignore NPM builds
 ```
 
 ## Testing
@@ -156,7 +157,7 @@ it('should work', () => {
 
 Related tests can be found in `core/watcher/mod.test.ts`.
 
-Filesystem watching can be _tricky_ to test, especially if not confortable with [async iterators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for-await...of) and/or if not aware about asynchronous ops leaks, which Deno tracks for you:
+Filesystem watching can be _tricky_ to test, especially if not comfortable with [async iterators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for-await...of) and/or if not aware about asynchronous ops leaks, which Deno tracks for you:
 
 ```
 AssertionError: Test case is leaking async ops.
@@ -171,7 +172,7 @@ Make sure to await all promises returned from Deno APIs before
 finishing test case.
 ```
 
-Therefore, you shall find an `exec` method, allowing you to automatically set up temporary folders, run and safely terminate iterators.
+Therefore, you shall find an `exec` utility inside the aforementioned file, allowing you to automatically set up temporary folders, run and safely terminate iterators, enabling individual tests to be run under _~400ms_.
 
 ```typescript
 async function exec(fn: (path: string) => void) { ... }
@@ -179,7 +180,7 @@ async function exec(fn: (path: string) => void) { ... }
 it("should work", async () => {
   const events: Array<FsEvent> = await exec((path) => {
     // Do something with the filesystem..
-    Deno.writeTextFileSync(join(path, "A.txt"), "Writing a file...");
+    Deno.writeTextFileSync(join(path, "A.txt"), "Some content");
   });
   // Process and assert events..
   expect(events.length).toBe(2);

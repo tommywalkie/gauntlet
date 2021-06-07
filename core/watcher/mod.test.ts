@@ -5,11 +5,7 @@ import { DenoFileSystem as fs } from "../../server/utils.ts";
 import { FileWatcher, watchFs } from "./mod.ts";
 import { randomId } from "../utils.ts";
 
-const testDir = join(Deno.cwd(), "__TEST__");
-if (existsSync(testDir)) {
-  Deno.removeSync(testDir, { recursive: true });
-}
-Deno.mkdirSync(testDir, { recursive: true });
+const testDir = Deno.makeTempDirSync();
 
 function makeWatchableTempDir(): [string, FileWatcher] {
   const source = join(testDir, `./${randomId()}`);
@@ -67,12 +63,12 @@ it("should be able to run and pause a watcher", async () => {
   expect(true).toBeTruthy();
 });
 
-it("should be able to track newly added files", async () => {
+it("should track newly added files", async () => {
   const events = await exec((path) => {
     Deno.writeTextFileSync(join(path, "A.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "B.txt"), "Hello world");
-    Deno.writeTextFileSync(join(path, "A.txt"), "Editted my hello world");
   });
+  expect(events.length).toBe(2);
   expect(events[0].kind).toBe("watch");
-  expect(events.length).toBe(4);
+  expect(events[1].kind).toBe("create");
+  expect(events[1].entry.name).toBe("A.txt");
 });

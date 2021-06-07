@@ -2,7 +2,7 @@
 import { AsyncPushIterator } from "../../imports/graphqlade.ts";
 import { EventEmitter } from "../../imports/pietile-eventemitter.ts";
 import { isAbsolute, join, normalize } from "../../imports/path.ts";
-import { randomId, toTypedArray } from "../utils.ts";
+import { randomId, replaceSlashes, toTypedArray } from "../utils.ts";
 import type {
   FileSystemLike,
   FsEvent,
@@ -25,14 +25,6 @@ export interface Directory extends Item {
   data: undefined;
   isFile: false;
   isDirectory: true;
-}
-
-/**
- * Same as `String.prototype.replaceAll("\\", "/")`, except it has better
- * compatibility.
- */
-export function replaceSlashes(str: string) {
-  return str.split(/\\/).join("/");
 }
 
 /**

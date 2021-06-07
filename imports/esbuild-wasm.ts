@@ -1,32 +1,11 @@
-// @deno-types="https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.5/esm/browser.d.ts"
-import * as esbuildWasm from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.5/esm/browser.min.js";
+import * as esbuildWasm from "https://esm.sh/esbuild-wasm@0.12.5";
 import type {
   TransformFailure,
   TransformOptions,
   TransformResult,
-} from "https://cdn.jsdelivr.net/npm/esbuild-wasm@0.12.5/esm/browser.d.ts";
+} from "https://esm.sh/esbuild-wasm@0.12.5";
 
 let READY = false;
-
-export type EsbuildResult =
-  | TransformResult
-  | TransformFailure & { code?: string };
-
-export async function transform(
-  input: string,
-  options?: TransformOptions,
-): Promise<EsbuildResult> {
-  if (!READY) {
-    throw new Error("esbuild not initialized.");
-  }
-  options = options ?? {};
-  const result = await esbuildWasm.transform(input, {
-    format: "esm",
-    loader: "tsx",
-    ...options,
-  }).catch((_: TransformFailure) => _);
-  return result;
-}
 
 export async function initialize() {
   if (READY) return;
@@ -39,3 +18,7 @@ export async function initialize() {
 export function stop() {
   return;
 }
+
+export const transform = esbuildWasm.transform;
+
+export type { TransformFailure, TransformOptions, TransformResult };

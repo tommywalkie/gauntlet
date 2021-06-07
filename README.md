@@ -32,7 +32,7 @@ Gauntlet is a _work-in-progress_ naive and fast ES Modules powered frontend tool
 -  <img src="https://www.thecolorapi.com/id?hex=339966&format=svg&named=false&w=12&h=12">  <!-- Time -->Hot module replacement support (**_planned!_**)
 -  <img src="https://www.thecolorapi.com/id?hex=FFFF00&format=svg&named=false&w=12&h=12">  <!-- Mind -->Subscribable, watchable, virtual filesystem support
 -  <img src="https://www.thecolorapi.com/id?hex=FF9900&format=svg&named=false&w=12&h=12">  <!-- Soul -->Dependency pre-bundling (**_planned!_**)
--  <img src="https://www.thecolorapi.com/id?hex=FF0000&format=svg&named=false&w=12&h=12">  <!-- Reality -->Out-of-the-box TypeScript/JSX support, plus Snowpack plugins (**_planned!_**)
+-  <img src="https://www.thecolorapi.com/id?hex=FF0000&format=svg&named=false&w=12&h=12">  <!-- Reality -->Out-of-the-box support for TypeScript, JSX and WindiCSS (**_planned!_**)
 
 ## Contributing
 
